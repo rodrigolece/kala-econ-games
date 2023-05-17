@@ -1,0 +1,9 @@
+flake8
+flake8-black
+isort
+networkx
+numpy
+pendulum
+pre-commit
+pylint
+pytest
