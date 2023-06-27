@@ -4,7 +4,7 @@ name = "kala"
 version = "0.0.1"
 authors = [
   { name="Rodrigo L.C.", email="rodrigolealc@ciencias.unam.mx" },
-  # TODO: add Leo's
+  { name="Leonardo C.G.", email="lmcastrogonzalez@turing.ac.uk"}
 ]
 description = "Kala: agent-based econ games"
 readme = "README.md"

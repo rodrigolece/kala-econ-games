@@ -45,14 +45,29 @@ class SaverTraits(BaseAgentTraits):
 
     Attributes
     ----------
-    is_saver : bool
+    group: int
+    savings_share: float
+    min_consumption: float
+    min_specialization: float
     """
 
-    is_saver: bool
     group: int
+    savings_share: float
+    min_consumption: float
+    min_specialization: float
 
+    if savings_share < 0 or savings_share > 1:
+            raise ValueError("expected number between [0, 1] (inclusive) for savings_share")
+    if min_specialization < 0 or min_specialization > 1:
+            raise ValueError("expected number between [0, 1] (inclusive) for min_specialization")
 
 if __name__ == "__main__":
-    st = SaverTraits(is_saver=True, group=0)
-    assert st.is_saver
-    assert st.to_dict()["is_saver"]
+    st = SaverTraits(group=0, saving_shares=0.1, min_consumption=1, min_specialization=0.1)
+    assert st.group == 0
+    assert st.to_dict()["group"] == 0
+    assert st.savings_share==0.1
+    assert st.to_dict()["savings_share"]==0.1
+    assert st.min_consumption==1
+    assert st.to_fict()["min_consumption"]==1
+    assert st.min_specialization==0.1
+    assert st.to_dict()["min_specialization"]==0.1

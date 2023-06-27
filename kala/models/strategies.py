@@ -2,10 +2,12 @@
 from abc import ABC, abstractmethod
 from typing import Mapping, Sequence
 
+from agents import InvestorAgent
+
 import numpy as np
 from numpy.random import Generator
 
-from utils.stats import truncated_multivariate_normal, truncated_normal
+from utils.stats import truncated_multivariate_normal, truncated_normal, get_eta_hat_hat
 
 
 class BaseStrategy(ABC):
@@ -60,7 +62,16 @@ class IndividualInvestingStrategy(BaseStrategy):
 class PairwiseInvestingStrategy(BaseStrategy):
     payoff_matrix: Mapping[tuple[str, ...], tuple[float, ...]]
 
-    def __init__(self, risk_vars: Sequence[float], risk_means: Sequence[float] = (1.0, 1.0)):
+    def __init__(
+            self, 
+            agent_origin: InvestorAgent, 
+            agent_destination: InvestorAgent, 
+            risk_vars: Sequence[float],
+            sigma: function,
+            d_sigma: function,
+            args_sigma: list,
+            risk_means: Sequence[float] = (1.0, 1.0),
+        ):
         if len(risk_vars) != 2:
             raise ValueError("provide exactly two values for the variances")
 
@@ -70,13 +81,31 @@ class PairwiseInvestingStrategy(BaseStrategy):
         self.risk_means = np.asarray(risk_means)
         self.risk_vars = np.asarray(risk_vars)
 
+        A_origin = agent_origin.get_property("income_per_period")
+        A_destination = agent_destination.get_property("income_per_period")
+
+        payoff_sn = A_origin*(agent_origin.get_trait("min_specialization")+agent_origin.specialization_degree)
+        payoff_ns = A_destination*(agent_destination.get_trait("min_specialization")+agent_destination.specialization_degree)
+
+        # Assumption of same alpha and same s
+        eta_hat_hat = get_eta_hat_hat(
+            agent_origin.get_trait("min_specialization"),
+            agent_destination.get_trait("min_consumption"),
+            sigma,
+            d_sigma,
+            args_sigma,
+        )
+        if eta_hat_hat < 0 or eta_hat_hat > 1:
+            raise ValueError("expected number between [0, 1] (inclusive)")
+        
+        payoff_ss = A_origin*(agent_origin.get_trait("minimum_specialization")+eta_hat_hat)
+
         self.payoff_matrix = {
-            # TODO: model the matrix properly
-            ("saver", "saver"): (3, 3),
-            ("saver", "non-saver"): (3, 1),
-            ("non-saver", "saver"): (1, 3),
+            ("saver", "saver"): (payoff_ss, payoff_ss),
+            ("saver", "non-saver"): (payoff_sn, A_destination),
+            ("non-saver", "saver"): (A_origin, payoff_ns),
             # symmetric defn is needed bcs multivariate doesn't treat as interchangeable
-            ("non-saver", "non-saver"): (1, 1),
+            ("non-saver", "non-saver"): (A_origin, A_destination),
         }
 
     # pylint: disable=arguments-differ

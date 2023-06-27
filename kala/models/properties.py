@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from typing import Any, TypeVar
 
-
 @dataclass
 class BaseProperties(ABC):
     """
@@ -54,14 +53,14 @@ class SaverProperties(BaseProperties):
     Attributes
     ----------
     total_savings : float
+    total_savings: float
     income_per_period : float
-    specialization_degree : float
-        A number between [0, 1].
+    
     """
 
+    is_saver: bool
     total_savings: float
     income_per_period: float
-    specialization_degree: float
 
     def update(self) -> None:
         self.total_savings += self.income_per_period
@@ -69,8 +68,10 @@ class SaverProperties(BaseProperties):
 
 
 if __name__ == "__main__":
-    sp = SaverProperties(0, 1, 0.5)
+    sp = SaverProperties(is_saver=True, total_savings=5, income_per_period=2)
     sp.update()
     sp.update()
-    assert sp.total_savings == 2
-    assert sp.to_dict()["total_savings"] == 2
+    assert sp.total_savings == 9
+    assert sp.to_dict()["total_savings"] == 9
+    assert sp.is_saver
+    assert sp.to_dict()["is_saver"]

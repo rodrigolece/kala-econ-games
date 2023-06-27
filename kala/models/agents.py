@@ -8,6 +8,7 @@ from models.properties import PropertiesType, SaverProperties
 from models.traits import SaverTraits, TraitsType
 
 from utils.misc import uuid
+from utils.stats import get_eta_hat
 
 
 class BaseAgent(ABC):
@@ -90,8 +91,14 @@ class InvestorAgent(BaseAgent):
         self,
         is_saver: bool,
         group: int,
+        savings_share: float, 
+        min_consumption: float,
+        min_specialization: float,
+        sigma: function,
+        d_sigma: function,
+        args_sigma: list,
         income_per_period: float = 1.0,
-        specialization_degree: float = 0.0,
+        total_savings: float = 0,
     ):
         """Investor agent.
 
@@ -101,6 +108,18 @@ class InvestorAgent(BaseAgent):
             _description_
         group : int
             _description_
+        saving_share: float
+            _description_
+        min_consumption: float
+            _description_
+        min_specialization: float
+            _description_
+        sigma: function
+            _description_
+        d_sigma: function
+            _description_
+        args_sigma: list
+            _description_
         income_per_period : float
             _description_ (default is 1.0).
         specialization_degree : float
@@ -109,14 +128,30 @@ class InvestorAgent(BaseAgent):
         # Checks
         if group not in [0, 1]:
             raise ValueError("the agent group must be 0 or 1")
-        traits = SaverTraits(is_saver, group)
+        traits = SaverTraits(
+            group=group, 
+            savings_share=savings_share, 
+            min_consumption=min_consumption, 
+            min_specialization=min_specialization
+        )
 
+        specialization_degree = get_eta_hat(
+            min_specialization, 
+            min_consumption, 
+            sigma, 
+            d_sigma, 
+            args_sigma
+        )
+        
         if specialization_degree < 0 or specialization_degree > 1:
             raise ValueError("expected number between [0, 1] (inclusive)")
+        else:
+            self.specialization_degree = specialization_degree
+
         props = SaverProperties(
-            total_savings=0,
+            is_saver=is_saver,
+            total_savings=total_savings,
             income_per_period=income_per_period,
-            specialization_degree=specialization_degree,
         )
 
         super().__init__(traits=traits, properties=props)
@@ -126,7 +161,16 @@ class InvestorAgent(BaseAgent):
 
 
 if __name__ == "__main__":
-    agent = InvestorAgent(is_saver=True, group=0)
+    agent = InvestorAgent(
+        is_saver=True,
+        group=0,
+        savings_share=0.1, 
+        min_consumption=1,
+        min_specialization=0.1,
+        sigma=lambda x, args: args[0]*x,
+        d_sigma=lambda x, args: args[0],
+        args_sigma=[1],
+    )
     print(f"Hello from agent {agent.uuid}!")
     assert agent.get_trait("is_saver")
     agent.play_strategy()
