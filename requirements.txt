@@ -7,3 +7,4 @@ pendulum
 pre-commit
 pylint
 pytest
+scipy

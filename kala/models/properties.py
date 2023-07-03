@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from typing import Any, TypeVar
 
+
 @dataclass
 class BaseProperties(ABC):
     """
@@ -55,7 +56,7 @@ class SaverProperties(BaseProperties):
     total_savings : float
     total_savings: float
     income_per_period : float
-    
+
     """
 
     is_saver: bool

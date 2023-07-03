@@ -1,6 +1,6 @@
 """Module defining different types of agents"""
 from abc import ABC, abstractmethod
-from typing import Any, TypeVar
+from typing import Any, Callable, TypeVar
 
 from models.properties import PropertiesType, SaverProperties
 
@@ -91,14 +91,14 @@ class InvestorAgent(BaseAgent):
         self,
         is_saver: bool,
         group: int,
-        savings_share: float, 
+        savings_share: float,
         min_consumption: float,
         min_specialization: float,
-        sigma: function,
-        d_sigma: function,
+        sigma: Callable,
+        d_sigma: Callable,
         args_sigma: list,
         income_per_period: float = 1.0,
-        total_savings: float = 0,
+        total_savings: float = 0.0,
     ):
         """Investor agent.
 
@@ -114,9 +114,9 @@ class InvestorAgent(BaseAgent):
             _description_
         min_specialization: float
             _description_
-        sigma: function
+        sigma: Callable
             _description_
-        d_sigma: function
+        d_sigma: Callable
             _description_
         args_sigma: list
             _description_
@@ -129,20 +129,16 @@ class InvestorAgent(BaseAgent):
         if group not in [0, 1]:
             raise ValueError("the agent group must be 0 or 1")
         traits = SaverTraits(
-            group=group, 
-            savings_share=savings_share, 
-            min_consumption=min_consumption, 
-            min_specialization=min_specialization
+            group=group,
+            savings_share=savings_share,
+            min_consumption=min_consumption,
+            min_specialization=min_specialization,
         )
 
         specialization_degree = get_eta_hat(
-            min_specialization, 
-            min_consumption, 
-            sigma, 
-            d_sigma, 
-            args_sigma
+            min_specialization, min_consumption, sigma, d_sigma, args_sigma
         )
-        
+
         if specialization_degree < 0 or specialization_degree > 1:
             raise ValueError("expected number between [0, 1] (inclusive)")
         else:
@@ -164,10 +160,10 @@ if __name__ == "__main__":
     agent = InvestorAgent(
         is_saver=True,
         group=0,
-        savings_share=0.1, 
+        savings_share=0.1,
         min_consumption=1,
         min_specialization=0.1,
-        sigma=lambda x, args: args[0]*x,
+        sigma=lambda x, args: args[0] * x,
         d_sigma=lambda x, args: args[0],
         args_sigma=[1],
     )

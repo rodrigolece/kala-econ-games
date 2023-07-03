@@ -1,13 +1,12 @@
 """Module defining agent strategies."""
 from abc import ABC, abstractmethod
-from typing import Mapping, Sequence
-
-from agents import InvestorAgent
+from typing import Callable, Mapping, Sequence
 
 import numpy as np
+from agents import InvestorAgent
 from numpy.random import Generator
 
-from utils.stats import truncated_multivariate_normal, truncated_normal, get_eta_hat_hat
+from utils.stats import get_eta_hat_hat, truncated_multivariate_normal, truncated_normal
 
 
 class BaseStrategy(ABC):
@@ -63,15 +62,15 @@ class PairwiseInvestingStrategy(BaseStrategy):
     payoff_matrix: Mapping[tuple[str, ...], tuple[float, ...]]
 
     def __init__(
-            self, 
-            agent_origin: InvestorAgent, 
-            agent_destination: InvestorAgent, 
-            risk_vars: Sequence[float],
-            sigma: function,
-            d_sigma: function,
-            args_sigma: list,
-            risk_means: Sequence[float] = (1.0, 1.0),
-        ):
+        self,
+        agent_origin: InvestorAgent,
+        agent_destination: InvestorAgent,
+        risk_vars: Sequence[float],
+        sigma: Callable,
+        d_sigma: Callable,
+        args_sigma: list,
+        risk_means: Sequence[float] = (1.0, 1.0),
+    ):
         if len(risk_vars) != 2:
             raise ValueError("provide exactly two values for the variances")
 
@@ -84,8 +83,13 @@ class PairwiseInvestingStrategy(BaseStrategy):
         A_origin = agent_origin.get_property("income_per_period")
         A_destination = agent_destination.get_property("income_per_period")
 
-        payoff_sn = A_origin*(agent_origin.get_trait("min_specialization")+agent_origin.specialization_degree)
-        payoff_ns = A_destination*(agent_destination.get_trait("min_specialization")+agent_destination.specialization_degree)
+        payoff_sn = A_origin * (
+            agent_origin.get_trait("min_specialization") + agent_origin.specialization_degree
+        )
+        payoff_ns = A_destination * (
+            agent_destination.get_trait("min_specialization")
+            + agent_destination.specialization_degree
+        )
 
         # Assumption of same alpha and same s
         eta_hat_hat = get_eta_hat_hat(
@@ -97,8 +101,8 @@ class PairwiseInvestingStrategy(BaseStrategy):
         )
         if eta_hat_hat < 0 or eta_hat_hat > 1:
             raise ValueError("expected number between [0, 1] (inclusive)")
-        
-        payoff_ss = A_origin*(agent_origin.get_trait("minimum_specialization")+eta_hat_hat)
+
+        payoff_ss = A_origin * (agent_origin.get_trait("minimum_specialization") + eta_hat_hat)
 
         self.payoff_matrix = {
             ("saver", "saver"): (payoff_ss, payoff_ss),
@@ -146,21 +150,21 @@ if __name__ == "__main__":
         pay = strategy.calculate_payoff(trait="non-saver", invested_amt=amt, rng=rng)
         print(f"  Invested: {amt:.2f}\tPayoff: {pay:.2f}")
 
-    amts = 10, 10
-    pair_strategy = PairwiseInvestingStrategy(risk_vars=(2, 1))
+    # amts = 10, 10
+    # pair_strategy = PairwiseInvestingStrategy(risk_vars=(2, 1))  # FIXME: missing kwargs
 
-    # Pairwise game
-    # -------------
-    print("\n\nSaver / saver")
-    for _ in range(3):
-        pay1, pay2 = pair_strategy.calculate_payoff(
-            traits=("saver", "saver"), invested_amts=amts, rng=rng
-        )
-        print(f"  Both invested: {amt:.2f}\tPayoff 1: {pay1:.2f}\t\tPayoff 2: {pay2:.2f}")
+    # # Pairwise game
+    # # -------------
+    # print("\n\nSaver / saver")
+    # for _ in range(3):
+    #     pay1, pay2 = pair_strategy.calculate_payoff(
+    #         traits=("saver", "saver"), invested_amts=amts, rng=rng
+    #     )
+    #     print(f"  Both invested: {amt:.2f}\tPayoff 1: {pay1:.2f}\t\tPayoff 2: {pay2:.2f}")
 
-    print("\nSaver / non-saver")
-    for _ in range(3):
-        pay1, pay2 = pair_strategy.calculate_payoff(
-            traits=("saver", "non-saver"), invested_amts=amts, rng=rng
-        )
-        print(f"  Both invested: {amt:.2f}\tPayoff 1: {pay1:.2f}\t\tPayoff 2: {pay2:.2f}")
+    # print("\nSaver / non-saver")
+    # for _ in range(3):
+    #     pay1, pay2 = pair_strategy.calculate_payoff(
+    #         traits=("saver", "non-saver"), invested_amts=amts, rng=rng
+    #     )
+    #     print(f"  Both invested: {amt:.2f}\tPayoff 1: {pay1:.2f}\t\tPayoff 2: {pay2:.2f}")

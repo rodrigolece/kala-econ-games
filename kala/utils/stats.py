@@ -1,11 +1,11 @@
-from typing import Sequence
+from typing import Callable, Sequence
 
 import numpy as np
 from numpy.random import Generator
-from scipy.special import erf
 from scipy import integrate
-from scipy.stats import multivariate_normal as mvn
 from scipy.optimize import fsolve
+from scipy.special import erf
+from scipy.stats import multivariate_normal as mvn
 
 
 def truncated_normal(
@@ -48,12 +48,7 @@ def truncated_multivariate_normal(
 
 
 def roots_eta_hat(
-        eta: float, 
-        alpha: float, 
-        a:float, 
-        sigma: function, 
-        d_sigma: function, 
-        args_sigma: list
+    eta: float, alpha: float, a: float, sigma: Callable, d_sigma: Callable, args_sigma: list
 ):
     """
     Equation from which we obtain eta hat.
@@ -61,54 +56,43 @@ def roots_eta_hat(
     sigma_eta = sigma(eta, args_sigma)
     d_sigma_eta = d_sigma(eta, args_sigma)
     arg = a / (np.sqrt(2) * sigma_eta)
-    d_erf = np.sqrt(2 / np.pi) * a * (sigma_eta**2) * (1 - np.exp(-1*arg**2)) * d_sigma_eta
-    
+    d_erf = np.sqrt(2 / np.pi) * a * (sigma_eta**2) * (1 - np.exp(-1 * arg**2)) * d_sigma_eta
+
     equation = (alpha + eta) * d_erf + erf(arg) - 1
     return equation
 
-def kernel(
-        x: float, 
-        y: float, 
-        sigma: float
-):
+
+def kernel(x: float, y: float, sigma: float):
     """
     Kernel of multivariate normal distribution used to integrate.
     """
     arg = (x**2 + y**2) / (2 * sigma)
-    return np.exp(-1*arg) * (arg - 1)
+    return np.exp(-1 * arg) * (arg - 1)
+
 
 def roots_eta_hat_hat(
-        eta: float, 
-        alpha: float, 
-        a: float, 
-        sigma: function, 
-        d_sigma: function, 
-        args_sigma: list
+    eta: float, alpha: float, a: float, sigma: Callable, d_sigma: Callable, args_sigma: list
 ):
     """
     Equation from which we obtain eta hat hat.
     """
     sigma_eta = sigma(eta, args_sigma)
     d_sigma_eta = d_sigma(eta, args_sigma)
-    arg = a / (np.sqrt(2) * sigma_eta)
+    # arg = a / (np.sqrt(2) * sigma_eta)  # FIXME: not used
 
     if sigma_eta > 0:
-        F = mvn.cdf([a, a], mean = [0, 0], cov = [[sigma_eta, 0], [0, sigma_eta]])
+        F = mvn.cdf([a, a], mean=[0, 0], cov=[[sigma_eta, 0], [0, sigma_eta]])
     else:
         F = 1
-    integral = integrate.nquad(kernel, [[-np.inf, a], [-np.inf, a]], args = [sigma_eta])[0]
+    integral = integrate.nquad(kernel, [[-np.inf, a], [-np.inf, a]], args=[sigma_eta])[0]
     d_F = (1 / (2 * np.pi * sigma_eta**2)) * d_sigma_eta * integral
 
     equation = (alpha + eta) * d_F + F - 1
     return equation
 
+
 def get_eta_hat(
-        alpha: float,
-        a: float,
-        sigma: function,
-        d_sigma: function,
-        args_sigma: list,
-        x0: float = 1.
+    alpha: float, a: float, sigma: Callable, d_sigma: Callable, args_sigma: list, x0: float = 1.0
 ):
     """
     Function to obtain eta hat for an individual saver.
@@ -116,13 +100,9 @@ def get_eta_hat(
     eta_hat = fsolve(roots_eta_hat, x0, args=(alpha, a, sigma, d_sigma, args_sigma))
     return eta_hat
 
+
 def get_eta_hat_hat(
-        alpha: float,
-        a: float,
-        sigma: function,
-        d_sigma: function,
-        args_sigma: list,
-        x0: float = 1.
+    alpha: float, a: float, sigma: Callable, d_sigma: Callable, args_sigma: list, x0: float = 1.0
 ):
     """
     Function to obtain eta hat hat for two savers, supposing that alpha and s are the same for both.
