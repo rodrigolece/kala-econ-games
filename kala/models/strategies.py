@@ -102,7 +102,7 @@ class PairwiseInvestingStrategy(BaseStrategy):
         if eta_hat_hat < 0 or eta_hat_hat > 1:
             raise ValueError("expected number between [0, 1] (inclusive)")
 
-        payoff_ss = A_origin * (agent_origin.get_trait("minimum_specialization") + eta_hat_hat)
+        payoff_ss = A_origin * (agent_origin.get_trait("min_specialization") + eta_hat_hat)
 
         self.payoff_matrix = {
             ("saver", "saver"): (payoff_ss, payoff_ss),
@@ -150,21 +150,59 @@ if __name__ == "__main__":
         pay = strategy.calculate_payoff(trait="non-saver", invested_amt=amt, rng=rng)
         print(f"  Invested: {amt:.2f}\tPayoff: {pay:.2f}")
 
-    # amts = 10, 10
-    # pair_strategy = PairwiseInvestingStrategy(risk_vars=(2, 1))  # FIXME: missing kwargs
+    is_saver = True
+    group = 1
+    savings_share = 1 / 3
+    min_consumption = 1
+    min_specialization = 0.01
 
-    # # Pairwise game
-    # # -------------
-    # print("\n\nSaver / saver")
-    # for _ in range(3):
-    #     pay1, pay2 = pair_strategy.calculate_payoff(
-    #         traits=("saver", "saver"), invested_amts=amts, rng=rng
-    #     )
-    #     print(f"  Both invested: {amt:.2f}\tPayoff 1: {pay1:.2f}\t\tPayoff 2: {pay2:.2f}")
+    def sigma(x, args):
+        value = args[0] * x + args[1]
+        return value
 
-    # print("\nSaver / non-saver")
-    # for _ in range(3):
-    #     pay1, pay2 = pair_strategy.calculate_payoff(
-    #         traits=("saver", "non-saver"), invested_amts=amts, rng=rng
-    #     )
-    #     print(f"  Both invested: {amt:.2f}\tPayoff 1: {pay1:.2f}\t\tPayoff 2: {pay2:.2f}")
+    def d_sigma(x, args):
+        return args[0]
+
+    args_sigma = [1.0, 0]
+
+    agent1 = InvestorAgent(
+        is_saver,
+        group,
+        savings_share,
+        min_consumption,
+        min_specialization,
+        sigma,
+        d_sigma,
+        args_sigma,
+    )
+    agent2 = InvestorAgent(
+        is_saver,
+        group,
+        savings_share,
+        min_consumption,
+        min_specialization,
+        sigma,
+        d_sigma,
+        args_sigma,
+    )
+
+    amts = 10, 10
+    pair_strategy = PairwiseInvestingStrategy(
+        agent1, agent2, (2, 1), sigma, d_sigma, args_sigma
+    )  # FIXME: missing kwargs
+
+    # Pairwise game
+    # -------------
+    print("\n\nSaver / saver")
+    for _ in range(3):
+        pay1, pay2 = pair_strategy.calculate_payoff(
+            traits=("saver", "saver"), invested_amts=amts, rng=rng
+        )
+        print(f"  Both invested: {amt:.2f}\tPayoff 1: {pay1:.2f}\t\tPayoff 2: {pay2:.2f}")
+
+    print("\nSaver / non-saver")
+    for _ in range(3):
+        pay1, pay2 = pair_strategy.calculate_payoff(
+            traits=("saver", "non-saver"), invested_amts=amts, rng=rng
+        )
+        print(f"  Both invested: {amt:.2f}\tPayoff 1: {pay1:.2f}\t\tPayoff 2: {pay2:.2f}")

@@ -98,7 +98,7 @@ def get_eta_hat(
     Function to obtain eta hat for an individual saver.
     """
     eta_hat = fsolve(roots_eta_hat, x0, args=(alpha, a, sigma, d_sigma, args_sigma))
-    return eta_hat
+    return eta_hat[0]
 
 
 def get_eta_hat_hat(
@@ -108,4 +108,4 @@ def get_eta_hat_hat(
     Function to obtain eta hat hat for two savers, supposing that alpha and s are the same for both.
     """
     eta_hat_hat = fsolve(roots_eta_hat_hat, x0, args=(alpha, a, sigma, d_sigma, args_sigma))
-    return eta_hat_hat
+    return eta_hat_hat[0]

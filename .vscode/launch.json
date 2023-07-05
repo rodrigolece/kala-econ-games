@@ -8,7 +8,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/econ_games/"
+                "PYTHONPATH": "${workspaceFolder}/kala/"
             }
         }
     ]
