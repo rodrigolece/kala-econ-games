@@ -1,6 +1,6 @@
 """Module defining different types of agents"""
 from abc import ABC, abstractmethod
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Sequence, TypeVar
 from warnings import warn
 
 from models.properties import PropertiesType, SaverProperties
@@ -10,6 +10,23 @@ from models.traits import SaverTraits, TraitsType
 
 from utils.misc import uuid
 from utils.stats import get_eta_hat
+
+# class NeighbourhoodMixin:
+#     def __init__(self, graph: GraphType, node: int | str, *args, **kwargs):
+#         self._graph = graph
+#         self._node = node
+#         self._neighbourhood = list(graph.get_neighbours(node))
+
+#     def choose_neighbour(self, seed):
+#         node = choice(self._neighbourhood, rng=seed)
+#         # TODO: need to map
+
+# Inherit like so
+# class BaseAgent(NeighbourhoodMixin, ABC):
+# Inside __init__ initialise like so
+#         # Explicitly need to call super bcs of non-standard init inside the Mixin
+#         # See: https://stackoverflow.com/a/50465583/5998704
+#         super().__init__(graph)
 
 
 class BaseAgent(ABC):
@@ -28,12 +45,19 @@ class BaseAgent(ABC):
     # strategy: TODO
     _traits: TraitsType
     _properties: PropertiesType
-    uuid: str
+    uuid: int | str
 
-    def __init__(self, traits: TraitsType, properties: PropertiesType) -> None:
+    def __init__(
+        self,
+        traits: TraitsType,
+        properties: PropertiesType,
+        id: int | str | None = None,
+    ) -> None:
         self._traits = traits
         self._properties = properties
-        self.uuid = uuid()
+        if id is None:
+            id = uuid()
+        self.uuid = id
 
         # NB: the idea below isn't super useful bcs it doesn't copy using pointers
         # possible to fix?
@@ -42,6 +66,9 @@ class BaseAgent(ABC):
 
         # for key, val in properties.to_dict().items():
         #     setattr(self, f"_property_{key}", val)
+
+    def __hash__(self):
+        return hash(self.uuid)
 
     # pylint: disable=protected-access
     def get_property(self, property_name: str) -> Any:
@@ -92,12 +119,12 @@ class InvestorAgent(BaseAgent):
         self,
         is_saver: bool,
         group: int,
-        savings_share: float,
-        min_consumption: float,
-        min_specialization: float,
-        sigma: Callable,
-        d_sigma: Callable,
-        args_sigma: list,
+        sigma: Callable | None = None,
+        d_sigma: Callable | None = None,
+        args_sigma: Sequence | None = None,
+        savings_share: float = 0.33,
+        min_consumption: float = 1.0,
+        min_specialization: float = 0.01,
         income_per_period: float = 1.0,
         total_savings: float = 0.0,
     ):
@@ -135,6 +162,19 @@ class InvestorAgent(BaseAgent):
             min_consumption=min_consumption,
             min_specialization=min_specialization,
         )
+
+        if sigma is None:
+
+            def sigma(x, args):
+                return args[0] * x + args[1]
+
+        if d_sigma is None:
+
+            def d_sigma(x, args):
+                return args[0]
+
+        if args_sigma is None:
+            args_sigma = (1.0, 0.0)
 
         specialization_degree = get_eta_hat(
             min_specialization, min_consumption, sigma, d_sigma, args_sigma
@@ -180,3 +220,4 @@ if __name__ == "__main__":
     agent.play_strategy()
     agent.play_strategy()
     assert agent.get_property("total_savings") == 2
+    print(hash(agent))

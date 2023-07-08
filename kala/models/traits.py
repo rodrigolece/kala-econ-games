@@ -65,11 +65,12 @@ class SaverTraits(BaseAgentTraits):
 
 if __name__ == "__main__":
     st = SaverTraits(group=0, savings_share=0.1, min_consumption=1, min_specialization=0.1)
+    st_dict = st.to_dict()
     assert st.group == 0
-    assert st.to_dict()["group"] == 0
+    assert st_dict["group"] == st.group
     assert st.savings_share == 0.1
-    assert st.to_dict()["savings_share"] == 0.1
+    assert st_dict["savings_share"] == st.savings_share
     assert st.min_consumption == 1
-    assert st.to_dict()["min_consumption"] == 1
+    assert st_dict["min_consumption"] == st.min_consumption
     assert st.min_specialization == 0.1
-    assert st.to_dict()["min_specialization"] == 0.1
+    assert st_dict["min_specialization"] == st.min_specialization
