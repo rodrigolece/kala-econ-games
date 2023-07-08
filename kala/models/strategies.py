@@ -6,7 +6,7 @@ import numpy as np
 from agents import InvestorAgent
 from numpy.random import Generator
 
-from utils.stats import get_eta_hat_hat, truncated_multivariate_normal, truncated_normal
+from utils.stats import get_eta_hat_hat, multivariate_normal_truncated, normal_truncated
 
 
 class BaseStrategy(ABC):
@@ -52,7 +52,7 @@ class IndividualInvestingStrategy(BaseStrategy):
         if trait not in ("saver", "non-saver"):
             raise ValueError
 
-        random_var: float = truncated_normal(loc=self.risk_mean, scale=self.risk_std, rng=rng)
+        random_var: float = normal_truncated(loc=self.risk_mean, scale=self.risk_std, rng=rng)
         # size=None so numpy returns single number
 
         return invested_amt * self.payoff_matrix[(trait,)] * random_var
@@ -83,6 +83,7 @@ class PairwiseInvestingStrategy(BaseStrategy):
         A_origin = agent_origin.get_property("income_per_period")
         A_destination = agent_destination.get_property("income_per_period")
 
+        # TODO: change specialization degree to be a trait (and access w/ get_trait)
         payoff_sn = A_origin * (
             agent_origin.get_trait("min_specialization") + agent_origin.specialization_degree
         )
@@ -92,6 +93,7 @@ class PairwiseInvestingStrategy(BaseStrategy):
         )
 
         # Assumption of same alpha and same s
+        # FIXME: use keyword arguments
         eta_hat_hat = get_eta_hat_hat(
             agent_origin.get_trait("min_specialization"),
             agent_destination.get_trait("min_consumption"),
@@ -125,7 +127,7 @@ class PairwiseInvestingStrategy(BaseStrategy):
         invested_amts = np.asarray(invested_amts)
         payoffs = np.asarray(self.payoff_matrix[traits])
 
-        random_vars = truncated_multivariate_normal(
+        random_vars = multivariate_normal_truncated(
             mean=self.risk_means, var=self.risk_vars, rng=rng
         )
 
@@ -150,11 +152,8 @@ if __name__ == "__main__":
         pay = strategy.calculate_payoff(trait="non-saver", invested_amt=amt, rng=rng)
         print(f"  Invested: {amt:.2f}\tPayoff: {pay:.2f}")
 
-    is_saver = True
-    group = 1
-    savings_share = 1 / 3
-    min_consumption = 1
-    min_specialization = 0.01
+    # Pairwise game
+    # -------------
 
     def sigma(x, args):
         value = args[0] * x + args[1]
@@ -166,43 +165,41 @@ if __name__ == "__main__":
     args_sigma = [1.0, 0]
 
     agent1 = InvestorAgent(
-        is_saver,
-        group,
-        savings_share,
-        min_consumption,
-        min_specialization,
-        sigma,
-        d_sigma,
-        args_sigma,
+        is_saver=True,
+        group=0,
+        savings_share=0.33,
+        min_consumption=1,
+        min_specialization=0.01,
+        sigma=sigma,
+        d_sigma=d_sigma,
+        args_sigma=args_sigma,
     )
     agent2 = InvestorAgent(
-        is_saver,
-        group,
-        savings_share,
-        min_consumption,
-        min_specialization,
-        sigma,
-        d_sigma,
-        args_sigma,
+        is_saver=True,
+        group=0,
+        savings_share=0.33,
+        min_consumption=1,
+        min_specialization=0.01,
+        sigma=sigma,
+        d_sigma=d_sigma,
+        args_sigma=args_sigma,
     )
 
     amts = 10, 10
-    pair_strategy = PairwiseInvestingStrategy(
-        agent1, agent2, (2, 1), sigma, d_sigma, args_sigma
-    )  # FIXME: missing kwargs
+    pair_strategy = PairwiseInvestingStrategy(agent1, agent2, (2, 1), sigma, d_sigma, args_sigma)
 
-    # Pairwise game
-    # -------------
     print("\n\nSaver / saver")
     for _ in range(3):
         pay1, pay2 = pair_strategy.calculate_payoff(
             traits=("saver", "saver"), invested_amts=amts, rng=rng
         )
-        print(f"  Both invested: {amt:.2f}\tPayoff 1: {pay1:.2f}\t\tPayoff 2: {pay2:.2f}")
+        print(f"  Invested 1: {amts[0]:.2f}\tPayoff 1: {pay1:.2f}")
+        print(f"  Invested 2: {amts[1]:.2f}\tPayoff 2: {pay2:.2f}")
 
     print("\nSaver / non-saver")
     for _ in range(3):
         pay1, pay2 = pair_strategy.calculate_payoff(
             traits=("saver", "non-saver"), invested_amts=amts, rng=rng
         )
-        print(f"  Both invested: {amt:.2f}\tPayoff 1: {pay1:.2f}\t\tPayoff 2: {pay2:.2f}")
+        print(f"  Invested 1: {amts[0]:.2f}\tPayoff 1: {pay1:.2f}")
+        print(f"  Invested 2: {amts[1]:.2f}\tPayoff 2: {pay2:.2f}")

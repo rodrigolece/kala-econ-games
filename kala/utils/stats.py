@@ -1,4 +1,4 @@
-from typing import Callable, Sequence
+from typing import Any, Callable, Iterable, Sequence
 
 import numpy as np
 from numpy.random import Generator
@@ -8,32 +8,73 @@ from scipy.special import erf
 from scipy.stats import multivariate_normal as mvn
 
 
-def truncated_normal(
+def _default_rng(rng: Generator | None = None):
+    """If rng is already a Generator, pass-through; otherwise return default."""
+
+    if rng is None:
+        rng = np.random.default_rng()
+    elif isinstance(rng, int):
+        rng = np.random.default_rng(rng)
+
+    return rng
+
+
+def choice(
+    lst: Iterable[Any], size: int | None = None, replace: bool = False, rng: Generator | None = None
+):
+    rng = _default_rng(rng)
+    rng.choice(lst, size=size, replace=replace)
+
+    return rng.choice(lst, size=size, replace=replace)
+
+
+def normal(
     loc: float,
     scale: float,
     size: int | None = None,
     rng: Generator | None = None,
 ) -> float | np.ndarray:
-    if rng is None:
-        rng = np.random.default_rng()
+    """
+    Thin wrapper around NumPy's normal distribution.
 
-    vals = rng.normal(loc, scale, size)
-    return np.maximum(vals, 0)
+    """
+    rng = _default_rng(rng)
+
+    return rng.normal(loc, scale, size)
 
 
-def truncated_multivariate_normal(
+def normal_truncated(
+    loc: float,
+    scale: float,
+    size: int | None = None,
+    threshold: int = 0,
+    rng: Generator | None = None,
+) -> float | np.ndarray:
+    """
+    Draw normal random variables and compare them against a lower bound.
+
+    TODO: In the future we might want to add a/ an equivalent upper bound and b/ a
+    normalisation constant.
+    """
+    vals = normal(loc, scale, size, rng)
+
+    return np.maximum(vals, threshold)
+
+
+def multivariate_normal_truncated(
     mean: Sequence[float],
     var: Sequence[float] | None = None,
     cov: np.ndarray | None = None,
     size: int | None = None,
+    threshold: int = 0,
     rng: Generator | None = None,
 ):
     """
-    Exactly one of vars or cov must be non-null.
-    """
-    if rng is None:
-        rng = np.random.default_rng()
+    Draw multivariate normal random variables and compare them against a lower bound.
 
+    NB: Exactly one of vars or cov must be non-null.
+    """
+    rng = _default_rng(rng)
     mean = np.asarray(mean)
 
     if var is not None:
@@ -44,7 +85,8 @@ def truncated_multivariate_normal(
         cov = np.asarray(cov)
 
     vals = rng.multivariate_normal(mean, cov, size=size)
-    return np.maximum(vals, 0)
+
+    return np.maximum(vals, threshold)
 
 
 def roots_eta_hat(
@@ -76,7 +118,8 @@ def roots_eta_hat_hat(
     """
     Equation from which we obtain eta hat hat.
     """
-    sigma_eta = sigma(eta, args_sigma)
+    # FIXME: below is a hack but I don't understand why sigma returns array
+    sigma_eta = sigma(eta, args_sigma)[0]
     d_sigma_eta = d_sigma(eta, args_sigma)
     # arg = a / (np.sqrt(2) * sigma_eta)  # FIXME: not used
 
@@ -101,6 +144,7 @@ def get_eta_hat(
     return eta_hat[0]
 
 
+# FIXME: give meaningful names to parameters
 def get_eta_hat_hat(
     alpha: float, a: float, sigma: Callable, d_sigma: Callable, args_sigma: list, x0: float = 1.0
 ):

@@ -1,6 +1,7 @@
 """Module defining different types of agents"""
 from abc import ABC, abstractmethod
 from typing import Any, Callable, TypeVar
+from warnings import warn
 
 from models.properties import PropertiesType, SaverProperties
 
@@ -13,7 +14,7 @@ from utils.stats import get_eta_hat
 
 class BaseAgent(ABC):
     """
-    Base agent (protocol) meant to be subclassed.
+    Base agent meant to be subclassed.
 
     Attributes
     ----------
@@ -139,10 +140,17 @@ class InvestorAgent(BaseAgent):
             min_specialization, min_consumption, sigma, d_sigma, args_sigma
         )
 
-        if specialization_degree < 0 or specialization_degree > 1:
-            raise ValueError("expected number between [0, 1] (inclusive)")
-        else:
-            self.specialization_degree = specialization_degree
+        if specialization_degree < 0:
+            warn("root solving resulted specialization_degree < 0; setting to 0")
+            specialization_degree = 0
+
+        elif specialization_degree > 1:
+            warn("root solving resulted specialization_degree > 1; setting to 1")
+            specialization_degree = 1
+
+        self.specialization_degree = specialization_degree
+        # TODO: move this into traits
+        # (avoid directly adding fields under self)
 
         props = SaverProperties(
             is_saver=is_saver,
@@ -150,7 +158,7 @@ class InvestorAgent(BaseAgent):
             income_per_period=income_per_period,
         )
 
-        super().__init__(traits=traits, properties=props)
+        super().__init__(traits=traits, properties=props)  # **kwargs
 
     def play_strategy(self, *args, **kwargs) -> None:
         self._properties.update()
@@ -168,7 +176,7 @@ if __name__ == "__main__":
         args_sigma=[1],
     )
     print(f"Hello from agent {agent.uuid}!")
-    assert agent.get_trait("is_saver")
+    assert agent.get_property("is_saver")
     agent.play_strategy()
     agent.play_strategy()
     assert agent.get_property("total_savings") == 2
