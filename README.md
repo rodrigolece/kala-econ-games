@@ -30,7 +30,7 @@ The package has a couple of utilities (linters, formatters, etc.) that automatic
 To run on new contributions, use
 
 ```bash
-pre-commit run --all-files
+$ pre-commit run --all-files
 ```
 
 You might find it useful to create an alias, for example `alias pcr='pre-commit run --all-files`.
