@@ -92,7 +92,7 @@ class PairwiseInvestingStrategy(BaseStrategy):
             + agent_destination.specialization_degree
         )
 
-        # Assumption of same alpha and same s
+        # Assumption of same min_consumption and same min_specialization for both agents
         # FIXME: use keyword arguments
         eta_hat_hat = get_eta_hat_hat(
             agent_origin.get_trait("min_specialization"),
