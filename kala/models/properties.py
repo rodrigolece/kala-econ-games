@@ -72,7 +72,8 @@ if __name__ == "__main__":
     sp = SaverProperties(is_saver=True, total_savings=5, income_per_period=2)
     sp.update()
     sp.update()
+    sp_dict = sp.to_dict()
     assert sp.total_savings == 9
-    assert sp.to_dict()["total_savings"] == 9
+    assert sp_dict["total_savings"] == sp.total_savings
     assert sp.is_saver
-    assert sp.to_dict()["is_saver"]
+    assert sp_dict["is_saver"] == sp.is_saver
