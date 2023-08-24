@@ -34,7 +34,7 @@ class BaseAgent(ABC, Generic[TraitsT, PropertiesT]):
 
     Methods
     -------
-    play_strategy()
+    update()
 
     """
 
@@ -93,7 +93,7 @@ class BaseAgent(ABC, Generic[TraitsT, PropertiesT]):
         return getattr(self._traits, trait_name)
 
     @abstractmethod
-    def play_strategy(self, *args, **kwargs) -> None:
+    def update(self, *args, **kwargs) -> None:
         """Play one round of the game."""
 
 
@@ -107,7 +107,7 @@ class InvestorAgent(BaseAgent):
 
     Methods
     -------
-    play_strategy()
+    update()
     get_savings()
 
     """
@@ -141,7 +141,7 @@ class InvestorAgent(BaseAgent):
 
         super().__init__(traits=traits, properties=props)
 
-    def play_strategy(self, *args, **kwargs) -> None:
+    def update(self, *args, **kwargs) -> None:
         self._properties.update(*args, **kwargs)
 
     def get_savings(self) -> float:
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     assert agent.is_saver()
     print(f"Hello from agent {agent.uuid}!")
 
-    agent.play_strategy(payoff=2)
+    agent.update(payoff=2)
     assert agent.get_savings() == 2
-    agent.play_strategy(payoff=0.5)
+    agent.update(payoff=0.5)
     assert agent.get_savings() == 2.5

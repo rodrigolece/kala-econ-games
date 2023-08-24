@@ -4,35 +4,43 @@ from warnings import warn
 
 from kala.models.agents import AgentT
 from kala.models.graphs import GraphT
+from kala.models.strategies import StrategyT
 from kala.utils.stats import choice
 
 
-class DiscreteBaseGame(ABC, Generic[AgentT, GraphT]):
+class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
     time: int
     players: Sequence[AgentT]
     graph: GraphT
+    strategy: StrategyT
     _num_players: int
 
-    def __init__(self, players: Sequence[AgentT], graph: GraphT):
-        self.time = 0
+    def __init__(self, strategy: StrategyT, players: Sequence[AgentT], graph: GraphT):
+        self.strategy = strategy
         self.players = players
         self.graph = graph
         self._num_players = len(players)
+        self.time = 0
 
     @abstractmethod
     def match_opponents(self, seed: int | None = None) -> tuple | None:
         """Return a pair of matched opponents."""
 
-    def play_round(self, *args, **kwargs):
+    def play_round(self, *args, **kwargs) -> None:
         """Match two opponents and advance the time."""
         players = self.match_opponents()
+
         if players is not None:
-            for agent in players:
-                print(agent.uuid)  # DEBUG
-                agent.play_strategy(*args, **kwargs)
+            payoffs = self.strategy.calculate_payoff(*players, **kwargs)
+
+            for agent, pay in zip(players, payoffs):
+                saver_str = self.strategy.saver_encoding[agent.is_saver()]
+                print(f"Updating: {agent.uuid} ({saver_str})")  # DEBUG
+                agent.update(payoff=pay)
+
         self.time += 1
 
-    def get_total_wealth(self):
+    def get_total_wealth(self) -> float:
         """Sum the total savings of all the agents."""
         out = 0.0
         for player in self.players:
@@ -59,6 +67,7 @@ if __name__ == "__main__":
 
     from kala.models.agents import InvestorAgent
     from kala.models.graphs import SimpleGraph
+    from kala.models.strategies import CooperationStrategy
 
     num_players = 10
 
@@ -69,9 +78,10 @@ if __name__ == "__main__":
     g = nx.barabasi_albert_graph(num_players, 8, seed=0)
     G = SimpleGraph(g, nodes=agents)
 
-    game = DiscreteTwoByTwoGame(agents, G)
+    coop = CooperationStrategy()
+
+    game = DiscreteTwoByTwoGame(coop, agents, G)
     print(game.get_total_wealth())
-    game.play_round()
-    print(game.get_total_wealth())
-    game.play_round()
-    print(game.get_total_wealth())
+    for _ in range(5):
+        game.play_round()
+        print(game.get_total_wealth())

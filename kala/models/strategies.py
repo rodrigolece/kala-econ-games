@@ -1,205 +1,92 @@
 """Module defining agent strategies."""
 from abc import ABC, abstractmethod
-from typing import Callable, Mapping, Sequence
+from typing import Mapping, TypeVar
 
 import numpy as np
-from agents import InvestorAgent
-from numpy.random import Generator
 
-from utils.stats import get_eta_hat_hat, multivariate_normal_truncated, normal_truncated
+# from numpy.random import Generator
+
+# from kala.utils.stats import multivariate_normal, normal
 
 
 class BaseStrategy(ABC):
-    payoff_matrix: Mapping[tuple[str, ...], float | tuple[float, ...]]
+    payoff_matrix: Mapping[tuple[str, ...], tuple[float, ...]]
 
     @abstractmethod
     def __init__(self, *args, **kwargs):
         pass
 
     @abstractmethod
-    def calculate_payoff(self, *args, **kwargs) -> float | tuple[float, ...]:
-        pass
+    def calculate_payoff(self, *args, **kwargs) -> tuple[float, ...]:
+        """A realization of the payoff for a strategy."""
 
 
-class IndividualInvestingStrategy(BaseStrategy):
-    payoff_matrix: Mapping[tuple[str, ...], float]
-
-    def __init__(
-        self,
-        risk_var: float,
-        risk_mean: float = 1.0,
-    ):
-        if risk_var <= 0:
-            raise ValueError("provide a positive variance")
-
-        if risk_mean < 0:
-            raise ValueError("provide a non-negative mean")
-
-        # NB: the variance should be a function of the specialization_degree
-        self.risk_std = np.sqrt(risk_var)
-        self.risk_mean = risk_mean
-
-        self.payoff_matrix = {
-            # TODO: model the matrix properly
-            ("saver",): 2,
-            ("non-saver",): 1,
-        }
-
-    # pylint: disable=arguments-differ
-    def calculate_payoff(
-        self, trait: str, invested_amt: float, rng: Generator | None = None
-    ) -> float:
-        if trait not in ("saver", "non-saver"):
-            raise ValueError
-
-        random_var: float = normal_truncated(loc=self.risk_mean, scale=self.risk_std, rng=rng)
-        # size=None so numpy returns single number
-
-        return invested_amt * self.payoff_matrix[(trait,)] * random_var
+StrategyT = TypeVar("StrategyT", bound=BaseStrategy)
+"""Used to refer to BaseStrategy as well as its subclasses."""
 
 
-class PairwiseInvestingStrategy(BaseStrategy):
-    payoff_matrix: Mapping[tuple[str, ...], tuple[float, ...]]
+class CooperationStrategy(BaseStrategy):
+    saver_encoding: Mapping[bool, str]
 
-    def __init__(
-        self,
-        agent_origin: InvestorAgent,
-        agent_destination: InvestorAgent,
-        risk_vars: Sequence[float],
-        sigma: Callable,
-        d_sigma: Callable,
-        args_sigma: list,
-        risk_means: Sequence[float] = (1.0, 1.0),
-    ):
-        if len(risk_vars) != 2:
-            raise ValueError("provide exactly two values for the variances")
+    def __init__(self, *args, eta_differential: float = 0.1, **kwargs):
+        if not 0 < eta_differential < 1:
+            raise ValueError("expected number between (0, 1) for 'eta_differential'")
 
-        if len(risk_means) != 2:
-            raise ValueError("provide exactly two values for the means")
-
-        self.risk_means = np.asarray(risk_means)
-        self.risk_vars = np.asarray(risk_vars)
-
-        A_origin = agent_origin.get_property("income_per_period")
-        A_destination = agent_destination.get_property("income_per_period")
-
-        # TODO: change specialization degree to be a trait (and access w/ get_trait)
-        payoff_sn = A_origin * (
-            agent_origin.get_trait("min_specialization") + agent_origin.specialization_degree
-        )
-        payoff_ns = A_destination * (
-            agent_destination.get_trait("min_specialization")
-            + agent_destination.specialization_degree
-        )
-
-        # Assumption of same min_consumption and same min_specialization for both agents
-        # FIXME: use keyword arguments
-        eta_hat_hat = get_eta_hat_hat(
-            agent_origin.get_trait("min_specialization"),
-            agent_destination.get_trait("min_consumption"),
-            sigma,
-            d_sigma,
-            args_sigma,
-        )
-        if eta_hat_hat < 0 or eta_hat_hat > 1:
-            raise ValueError("expected number between [0, 1] (inclusive)")
-
-        payoff_ss = A_origin * (agent_origin.get_trait("min_specialization") + eta_hat_hat)
+        payoff_ss = 1 + eta_differential
+        payoff_sn = 1 - eta_differential
 
         self.payoff_matrix = {
             ("saver", "saver"): (payoff_ss, payoff_ss),
-            ("saver", "non-saver"): (payoff_sn, A_destination),
-            ("non-saver", "saver"): (A_origin, payoff_ns),
-            # symmetric defn is needed bcs multivariate doesn't treat as interchangeable
-            ("non-saver", "non-saver"): (A_origin, A_destination),
+            ("saver", "non-saver"): (payoff_sn, 1),
+            ("non-saver", "saver"): (1, payoff_sn),
+            ("non-saver", "non-saver"): (1, 1),
         }
 
+        self.saver_encoding = {True: "saver", False: "non-saver"}
+
+    # FIXME: for the time being I am  making the simulation deterministic
     # pylint: disable=arguments-differ
     def calculate_payoff(
-        self, traits: tuple[str, str], invested_amts: Sequence[float], rng: Generator | None = None
-    ) -> tuple[float, float]:
-        if len(invested_amts) != 2:
-            raise ValueError("provide exactly two values for invested amounts")
-        for t in traits:
-            if t not in ("saver", "non-saver"):
-                raise ValueError
+        self,
+        *agents,
+        # risk_vars: Sequence[float],
+        # rng: Generator | None = None,
+        **kwargs,
+    ) -> tuple[float, ...]:
+        if len(agents) != 2:
+            raise ValueError("expected exactly two agents")
 
-        invested_amts = np.asarray(invested_amts)
-        payoffs = np.asarray(self.payoff_matrix[traits])
+        # if len(risk_vars) != 2:
+        #     raise ValueError("provide exactly two values for the variances")
 
-        random_vars = multivariate_normal_truncated(
-            mean=self.risk_means, var=self.risk_vars, rng=rng
-        )
+        saver_traits = tuple(self.saver_encoding[ag.is_saver()] for ag in agents)
+        payoffs = self.payoff_matrix[saver_traits]  # np.asarray
 
-        return invested_amts * payoffs * random_vars
+        # random_vars = multivariate_normal(mean=(1.0, 1.0), var=risk_vars, rng=rng)
+        # np.maximum(payoffs * random_vars, 0)
+
+        return payoffs
 
 
 if __name__ == "__main__":
+    from kala.models.agents import InvestorAgent
+
     rng = np.random.default_rng(seed=0)
 
-    # Individual game
-    # ---------------
-    amt = 10
-    strategy = IndividualInvestingStrategy(risk_var=2)
+    saver = InvestorAgent(is_saver=True)
+    non_saver = InvestorAgent(is_saver=False)
 
-    print("Saver")
-    for _ in range(3):
-        pay = strategy.calculate_payoff(trait="saver", invested_amt=amt, rng=rng)
-        print(f"  Invested: {amt:.2f}\tPayoff: {pay:.2f}")
+    strategy = CooperationStrategy()
+    print(strategy.calculate_payoff(saver, saver))
+    print(strategy.calculate_payoff(saver, non_saver))
+    print(strategy.calculate_payoff(non_saver, saver))
+    print(strategy.calculate_payoff(non_saver, non_saver))
 
-    print("\nNon-saver")
-    for _ in range(3):
-        pay = strategy.calculate_payoff(trait="non-saver", invested_amt=amt, rng=rng)
-        print(f"  Invested: {amt:.2f}\tPayoff: {pay:.2f}")
+    # Below will be useful when we add stochastic variations back in
+    # print("\n\nSaver / saver")
+    # for _ in range(3):
+    #     pay1, pay2 = strategy.calculate_payoff(saver, saver)
 
-    # Pairwise game
-    # -------------
-
-    def sigma(x, args):
-        value = args[0] * x + args[1]
-        return value
-
-    def d_sigma(x, args):
-        return args[0]
-
-    args_sigma = [1.0, 0]
-
-    agent1 = InvestorAgent(
-        is_saver=True,
-        group=0,
-        savings_share=0.33,
-        min_consumption=1,
-        min_specialization=0.01,
-        sigma=sigma,
-        d_sigma=d_sigma,
-        args_sigma=args_sigma,
-    )
-    agent2 = InvestorAgent(
-        is_saver=True,
-        group=0,
-        savings_share=0.33,
-        min_consumption=1,
-        min_specialization=0.01,
-        sigma=sigma,
-        d_sigma=d_sigma,
-        args_sigma=args_sigma,
-    )
-
-    amts = 10, 10
-    pair_strategy = PairwiseInvestingStrategy(agent1, agent2, (2, 1), sigma, d_sigma, args_sigma)
-
-    print("\n\nSaver / saver")
-    for _ in range(3):
-        pay1, pay2 = pair_strategy.calculate_payoff(
-            traits=("saver", "saver"), invested_amts=amts, rng=rng
-        )
-        print(f"  Invested 1: {amts[0]:.2f}\tPayoff 1: {pay1:.2f}")
-        print(f"  Invested 2: {amts[1]:.2f}\tPayoff 2: {pay2:.2f}")
-
-    print("\nSaver / non-saver")
-    for _ in range(3):
-        pay1, pay2 = pair_strategy.calculate_payoff(
-            traits=("saver", "non-saver"), invested_amts=amts, rng=rng
-        )
-        print(f"  Invested 1: {amts[0]:.2f}\tPayoff 1: {pay1:.2f}")
-        print(f"  Invested 2: {amts[1]:.2f}\tPayoff 2: {pay2:.2f}")
+    # print("\nSaver / non-saver")
+    # for _ in range(3):
+    #     pay1, pay2 = pair_strategy.calculate_payoff(saver, non_saver)
