@@ -17,7 +17,7 @@ class BaseProperties(ABC):
 
     Methods
     -------
-    as_dict()
+    to_dict()
         Return the properties as a dictionary.
     update()
         Do an update of the properties.
@@ -35,14 +35,13 @@ class BaseProperties(ABC):
         return asdict(self)
 
     @abstractmethod
-    def update(self) -> None:
+    def update(self, *args, **kwargs) -> None:
         """Do an update of the properties according to the class' internal rules."""
 
     # going forward we can add other methods that are common to all Properties
 
 
-# pylint: disable=invalid-name
-PropertiesType = TypeVar("PropertiesType", bound=BaseProperties)
+PropertiesT = TypeVar("PropertiesT", bound=BaseProperties)
 """Used to refer to BaseProperties as well as its subclasses."""
 
 
@@ -53,27 +52,24 @@ class SaverProperties(BaseProperties):
 
     Attributes
     ----------
-    total_savings : float
-    total_savings: float
     income_per_period : float
+    savings : float
 
     """
 
-    is_saver: bool
-    total_savings: float
+    savings: float
     income_per_period: float
 
-    def update(self) -> None:
-        self.total_savings += self.income_per_period
-        # TODO: - inversion + payoff
+    def update(self, *args, payoff: float = 1.0, **kwargs) -> None:
+        self.savings += self.income_per_period * payoff
 
 
 if __name__ == "__main__":
-    sp = SaverProperties(is_saver=True, total_savings=5, income_per_period=2)
-    sp.update()
-    sp.update()
-    sp_dict = sp.to_dict()
-    assert sp.total_savings == 9
-    assert sp_dict["total_savings"] == sp.total_savings
-    assert sp.is_saver
-    assert sp_dict["is_saver"] == sp.is_saver
+    sp = SaverProperties(savings=0, income_per_period=1)
+    # sp_dict = sp.to_dict() # this wouldn't pass 2nd assert
+    sp.update(payoff=1)
+    sp.update(payoff=1)
+    assert sp.savings == 2
+
+    sp_dict = sp.to_dict()  # NB: dict has copied values, not references
+    assert sp_dict["savings"] == sp.savings

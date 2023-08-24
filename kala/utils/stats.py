@@ -4,7 +4,7 @@ import numpy as np
 from numpy.random import Generator
 from scipy import integrate
 from scipy.optimize import fsolve
-from scipy.special import erf
+from scipy.special import erf  # pylint: disable=no-name-in-module
 from scipy.stats import multivariate_normal as mvn
 
 
@@ -44,11 +44,9 @@ def normal(
 
 
 def normal_truncated(
-    loc: float,
-    scale: float,
-    size: int | None = None,
+    *args,
     threshold: int = 0,
-    rng: Generator | None = None,
+    **kwargs,
 ) -> float | np.ndarray:
     """
     Draw normal random variables and compare them against a lower bound.
@@ -56,23 +54,23 @@ def normal_truncated(
     TODO: In the future we might want to add a/ an equivalent upper bound and b/ a
     normalisation constant.
     """
-    vals = normal(loc, scale, size, rng)
+    vals = normal(*args, **kwargs)
 
     return np.maximum(vals, threshold)
 
 
-def multivariate_normal_truncated(
+def multivariate_normal(
     mean: Sequence[float],
     var: Sequence[float] | None = None,
     cov: np.ndarray | None = None,
     size: int | None = None,
-    threshold: int = 0,
     rng: Generator | None = None,
 ):
     """
-    Draw multivariate normal random variables and compare them against a lower bound.
+    Thin wrapper around NumPy's multivariate normal distribution.
 
     NB: Exactly one of vars or cov must be non-null.
+
     """
     rng = _default_rng(rng)
     mean = np.asarray(mean)
@@ -84,7 +82,21 @@ def multivariate_normal_truncated(
     elif cov is not None:
         cov = np.asarray(cov)
 
-    vals = rng.multivariate_normal(mean, cov, size=size)
+    return rng.multivariate_normal(mean, cov, size=size)
+
+
+def multivariate_normal_truncated(
+    *args,
+    threshold: int = 0,
+    **kwargs,
+):
+    """
+    Draw multivariate normal random variables and compare them against a lower bound.
+
+    NB: Exactly one of vars or cov must be non-null.
+    """
+
+    vals = multivariate_normal(*args, **kwargs)
 
     return np.maximum(vals, threshold)
 

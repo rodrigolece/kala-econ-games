@@ -2,7 +2,7 @@
 import logging
 import sys
 
-from .consts import LOG_LEVEL, LOG_TAG  # VERSION
+from kala.settings.consts import LOG_LEVEL, LOG_TAG  # VERSION
 
 handler = logging.StreamHandler(sys.stdout)
 logger = logging.getLogger(LOG_TAG)
