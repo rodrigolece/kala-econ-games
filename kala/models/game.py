@@ -1,62 +1,87 @@
 from abc import ABC, abstractmethod
-from typing import Sequence
+from typing import Generic, Sequence
 from warnings import warn
 
-# for testing
-import networkx as nx
-from models.agents import AgentType, InvestorAgent
-from models.graphs import GraphType, SimpleGraph
-
-from utils.stats import choice
+from kala.models.agents import AgentT
+from kala.models.graphs import GraphT
+from kala.models.strategies import StrategyT
+from kala.utils.stats import choice
 
 
-class DiscreteBaseGame(ABC):
+class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
     time: int
-    players: Sequence[AgentType]
-    graph: GraphType
+    players: Sequence[AgentT]
+    graph: GraphT
+    strategy: StrategyT
     _num_players: int
 
-    def __init__(self, players: Sequence[AgentType], graph: GraphType):
-        self.time = 0
+    def __init__(self, strategy: StrategyT, players: Sequence[AgentT], graph: GraphT):
+        self.strategy = strategy
         self.players = players
         self.graph = graph
         self._num_players = len(players)
+        self.time = 0
 
     @abstractmethod
-    def match_opponents(self, *args, **kwargs) -> tuple | None:
-        """Returned (two or more) matched opponents."""
+    def match_opponents(self, seed: int | None = None) -> tuple | None:
+        """Return a pair of matched opponents."""
 
-    def advance_time(self):
+    def play_round(self, *args, **kwargs) -> None:
+        """Match two opponents and advance the time."""
         players = self.match_opponents()
+
         if players is not None:
-            for agent in players:
-                agent.play_strategy()
+            payoffs = self.strategy.calculate_payoff(*players, **kwargs)
+
+            for agent, pay in zip(players, payoffs):
+                saver_str = self.strategy.saver_encoding[agent.is_saver()]
+                print(f"Updating: {agent.uuid} ({saver_str})")  # DEBUG
+                agent.update(payoff=pay)
+
         self.time += 1
+
+    def get_total_wealth(self) -> float:
+        """Sum the total savings of all the agents."""
+        out = 0.0
+        for player in self.players:
+            out += player.get_savings()
+
+        return out
 
 
 class DiscreteTwoByTwoGame(DiscreteBaseGame):
     def match_opponents(self, seed: int | None = None) -> tuple | None:
-        player_id = choice(range(self._num_players), rng=seed)
-        player = self.graph.get_node(player_id)
-        neighs = self.graph.get_neighbours(player_id)
+        player = choice(self.players, rng=seed)
 
+        neighs = self.graph.get_neighbours(player)
         if len(neighs) == 0:
             warn("selected player does not have any neighbours")
             return None
-        else:
-            opponent = choice(neighs)
 
+        opponent = choice(neighs)
         return player, opponent
 
 
 if __name__ == "__main__":
+    import networkx as nx
+
+    from kala.models.agents import InvestorAgent
+    from kala.models.graphs import SimpleGraph
+    from kala.models.strategies import CooperationStrategy
+
     num_players = 10
 
     # A list of InvestorAgents
-    players = [InvestorAgent(is_saver=True, group=0) for _ in range(num_players)]
+    savers = [True, False] * 5
+    agents = [InvestorAgent(is_saver=savers[i]) for i in range(num_players)]
 
     g = nx.barabasi_albert_graph(num_players, 8, seed=0)
-    G = SimpleGraph(g, nodes=players)
+    G = SimpleGraph(g, nodes=agents)
 
-    game = DiscreteTwoByTwoGame(players, G)
-    game.advance_time()
+    coop = CooperationStrategy()
+
+    game = DiscreteTwoByTwoGame(coop, agents, G)
+    print(game.get_total_wealth())
+    for _ in range(5):
+        game.play_round()
+        print(game.get_total_wealth())

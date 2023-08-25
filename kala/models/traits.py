@@ -16,7 +16,7 @@ class BaseAgentTraits(ABC):
 
     Methods
     -------
-    as_dict()
+    to_dict()
         Return the traits as a dictionary.
     """
 
@@ -33,43 +33,40 @@ class BaseAgentTraits(ABC):
     # going forward we can add other methods that are common to all Traits
 
 
-# pylint: disable=invalid-name
-TraitsType = TypeVar("TraitsType", bound=BaseAgentTraits)
+TraitsT = TypeVar("TraitsT", bound=BaseAgentTraits)
 """Used to refer to BaseAgentTraits as well as its subclasses."""
 
 
 @dataclass
 class SaverTraits(BaseAgentTraits):
     """
-    Saving trait.
+    Saver traits.
 
     Attributes
     ----------
     group: int
-    savings_share: float
+    is_saver: bool
     min_consumption: float
     min_specialization: float
     """
 
     group: int
-    savings_share: float
+    is_saver: bool
     min_consumption: float
     min_specialization: float
 
     def __post_init__(self):
-        if self.savings_share < 0 or self.savings_share > 1:
-            raise ValueError("expected number between [0, 1] (inclusive) for savings_share")
-        if self.min_specialization < 0 or self.min_specialization > 1:
-            raise ValueError("expected number between [0, 1] (inclusive) for min_specialization")
+        if not 0 <= self.min_specialization <= 1:
+            raise ValueError("expected number between [0, 1] (inclusive) for 'min_specialization'")
 
 
 if __name__ == "__main__":
-    st = SaverTraits(group=0, savings_share=0.1, min_consumption=1, min_specialization=0.1)
+    st = SaverTraits(group=0, is_saver=True, min_consumption=1, min_specialization=0.1)
     st_dict = st.to_dict()
     assert st.group == 0
     assert st_dict["group"] == st.group
-    assert st.savings_share == 0.1
-    assert st_dict["savings_share"] == st.savings_share
+    assert st.is_saver
+    assert st_dict["is_saver"] == st.is_saver
     assert st.min_consumption == 1
     assert st_dict["min_consumption"] == st.min_consumption
     assert st.min_specialization == 0.1
