@@ -9,6 +9,28 @@ from kala.utils.stats import choice
 
 
 class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
+    """
+    Base game meant to be subclassed.
+
+    Attributes
+    ----------
+    time : int
+        The current time of the game.
+    players : Sequence[AgentT]
+        A list of agents.
+    graph : GraphT
+        The graph connecting the agents.
+    strategy : StrategyT
+        The strategy of the agents.
+
+    Methods
+    -------
+    match_opponents()
+    play_round()
+    get_total_wealth()
+
+    """
+
     time: int
     players: Sequence[AgentT]
     graph: GraphT
@@ -56,6 +78,11 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
 
 
 class DiscreteTwoByTwoGame(DiscreteBaseGame):
+    """
+    A discrete 2x2 game where agents play their strategy in pairs.
+
+    """
+
     def match_opponents(self, seed: int | None = None) -> tuple | None:
         player = choice(self.players, rng=seed)
 

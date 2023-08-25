@@ -12,9 +12,6 @@ class BaseProperties(ABC):
     Properties are similar to traits but they refer to attributes that are normally
     changing in time.
 
-    Attributes
-    ----------
-
     Methods
     -------
     to_dict()

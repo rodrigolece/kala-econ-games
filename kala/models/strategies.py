@@ -9,6 +9,24 @@ from kala.utils.stats import lognormal
 
 
 class BaseStrategy(ABC):
+    """
+    Base strategy meant to be subclassed.
+
+    Attributes
+    ----------
+    stochastic : bool
+        Whether the strategy is stochastic.
+    payoff_matrix : Mapping[tuple[str, ...], tuple[float, ...]]
+        A mapping from the strategy of each agent to the payoff tuple.
+
+    Methods
+    -------
+    calculate_payoff()
+        Calculate the payoff for a strategy.
+
+    """
+
+    stochastic: bool
     payoff_matrix: Mapping[tuple[str, ...], tuple[float, ...]]
 
     @abstractmethod
@@ -25,6 +43,14 @@ StrategyT = TypeVar("StrategyT", bound=BaseStrategy)
 
 
 class CooperationStrategy(BaseStrategy):
+    """
+    A strategy that models cooperation between agents.
+
+    Two agents that are savers will have a higher payoff (on expectation) than in all other cases,
+    but a saver that encounters a non-saver will see a worse outcome than the non-saver.
+
+    """
+
     # pylint: disable=unused-argument
     def __init__(
         self,
@@ -38,6 +64,33 @@ class CooperationStrategy(BaseStrategy):
         rng: Generator | None = None,
         **kwargs,
     ):
+        """
+        Initialize a cooperation strategy.
+
+        Parameters
+        ----------
+        stochastic : bool, optional
+            Whether to use a stochastic payoff matrix, by default False.
+        differential_inefficient : float, optional
+            The amount by which a saver is less efficient when encountering a non-savers, by default 0.1.
+        differential_efficient : float, optional
+            The amount by which a saver is more efficient when encountering a saver, by default 0.15.
+        min_specialization : float, optional
+            The minimum specialization of savers. NB: our implementation of the more general model assumes
+            the special case of the minimum specialization being equal for all agents.
+        dist_mean : float, optional
+            The mean of the lognormal distribution used to generate stochastic payoffs, by default 1.0.
+        dist_sigma : float, optional
+            The sigma of the lognormal distribution used to generate stochastic payoffs, by default 1.0.
+        rng : Generator, optional
+            A numpy random number generator, by default None.
+
+        Raises
+        ------
+        ValueError
+            If any of the parameters are invalid.
+
+        """
         # Checks
         if not 0 < differential_inefficient < 1:
             raise ValueError("expected number between (0, 1) for 'differential_inefficient'")

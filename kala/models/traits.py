@@ -11,9 +11,6 @@ class BaseAgentTraits(ABC):
 
     Traits are similar to properties but conceptually they remain fixed.
 
-    Attributes
-    ----------
-
     Methods
     -------
     to_dict()

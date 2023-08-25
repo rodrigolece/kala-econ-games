@@ -31,9 +31,13 @@ class BaseAgent(ABC, Generic[TraitsT, PropertiesT]):
 
     Attributes
     ----------
+    uuid : int | str
+        A unique identifier for the agent.
 
     Methods
     -------
+    get_property()
+    get_trait()
     update()
 
     """
