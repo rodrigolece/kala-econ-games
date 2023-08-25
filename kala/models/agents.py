@@ -31,9 +31,13 @@ class BaseAgent(ABC, Generic[TraitsT, PropertiesT]):
 
     Attributes
     ----------
+    uuid : int | str
+        A unique identifier for the agent.
 
     Methods
     -------
+    get_property()
+    get_trait()
     update()
 
     """
@@ -115,6 +119,7 @@ class InvestorAgent(BaseAgent):
     def __init__(
         self,
         is_saver: bool,
+        min_specialization: float = 0.0,
         income_per_period: float = 1.0,
     ):
         """Initialise new investor agent.
@@ -123,15 +128,17 @@ class InvestorAgent(BaseAgent):
         ----------
         is_saver : bool
             Boolean indicating whether the agent is a saver or not.
+        min_specialization : float
+            The minimum specialization (default is 0.0).
         income_per_period : float
             The income per period (default is 1.0).
         """
 
         traits = SaverTraits(
-            group=0,  # group not being used
+            group=0,  # not being used
             is_saver=is_saver,
             min_consumption=0,  # not being used
-            min_specialization=0,  # not being used
+            min_specialization=min_specialization,
         )
 
         props = SaverProperties(
