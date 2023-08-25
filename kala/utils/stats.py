@@ -32,8 +32,8 @@ def choice(
 
 
 def normal(
-    loc: float,
-    scale: float,
+    mean: float,
+    sigma: float,
     size: int | None = None,
     rng: Generator | None = None,
 ) -> float | np.ndarray:
@@ -43,7 +43,7 @@ def normal(
     """
     rng = _default_rng(rng)
 
-    return rng.normal(loc, scale, size)
+    return rng.normal(loc=mean, scale=sigma, size=size)
 
 
 def normal_truncated(
@@ -104,6 +104,21 @@ def multivariate_normal_truncated(
     return np.maximum(vals, threshold)
 
 
+def lognormal(
+    mean: float,
+    sigma: float,
+    size: int | None = None,
+    rng: Generator | None = None,
+) -> float | np.ndarray:
+    """
+    Thin wrapper around NumPy's log-normal distribution.
+
+    """
+    rng = _default_rng(rng)
+
+    return rng.lognormal(mean, sigma, size)
+
+
 def condition_efficient_specialization(
     strategy, efficient_specialization, min_specialization_i, min_specialization_j
 ):
@@ -117,7 +132,7 @@ def condition_efficient_specialization(
 
 
 def get_strategy(efficient_specialization, min_specialization_i, min_specialization_j):
-    """Function to obtain a strategy given two mininimum specializations of two agents"""
+    """Function to obtain a strategy given two minimum specializations of two agents"""
     results_strategy = minimize(
         condition_efficient_specialization,
         x0=0.5,
@@ -127,12 +142,12 @@ def get_strategy(efficient_specialization, min_specialization_i, min_specializat
 
     if not results_strategy.success:
         raise Exception(results_strategy.message)
-    else:
-        return results_strategy.x
+
+    return results_strategy.x
 
 
 def get_payoffs(*agents, differential_inefficient, differential_efficient):
-    """Function to comput the payoffs given two differentials with respect to 1."""
+    """Function to compute the payoffs given two differentials with respect to 1."""
     if len(agents) != 2:
         raise ValueError("expected exactly two agents")
 
@@ -141,19 +156,19 @@ def get_payoffs(*agents, differential_inefficient, differential_efficient):
 
     # eta_hat_hat
     min_min_specialization = min(
-        agents[0].traits["min_specialization"], agents[1].traits["min_specialization"]
+        agents[0].get_trait("min_specialization"), agents[1].get_trait("min_specialization")
     )
     efficient_specialization = 1 - min_min_specialization + differential_efficient
 
     strategy = get_strategy(
         efficient_specialization,
-        agents[0].traits["min_specialization"],
-        agents[1].traits["min_specialization"],
+        agents[0].get_trait("min_specialization"),
+        agents[1].get_trait("min_specialization"),
     )
 
     payoff_sn = inefficient_specialization
     payoff_ss = (1 - strategy) * (
-        agents[0].traits["min_specialization"] + efficient_specialization
-    ) + strategy * (agents[1].traits["min_specialization"] + efficient_specialization)
+        agents[0].get_trait("min_specialization") + efficient_specialization
+    ) + strategy * (agents[1].get_trait("min_specialization") + efficient_specialization)
 
     return payoff_sn, payoff_ss

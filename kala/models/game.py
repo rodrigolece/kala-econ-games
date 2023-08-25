@@ -26,6 +26,7 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
     def match_opponents(self, seed: int | None = None) -> tuple | None:
         """Return a pair of matched opponents."""
 
+    # pylint: disable=unused-argument
     def play_round(self, *args, **kwargs) -> None:
         """Match two opponents and advance the time."""
         players = self.match_opponents()
@@ -34,8 +35,13 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
             payoffs = self.strategy.calculate_payoff(*players, **kwargs)
 
             for agent, pay in zip(players, payoffs):
-                saver_str = self.strategy.saver_encoding[agent.is_saver()]
-                print(f"Updating: {agent.uuid} ({saver_str})")  # DEBUG
+                # printing just for debug purposes
+                # TODO: remove
+                saver_str = self.strategy._saver_encoding[  # pylint: disable=protected-access
+                    agent.is_saver()
+                ]
+                print(f"Updating: {agent.uuid} ({saver_str})")
+
                 agent.update(payoff=pay)
 
         self.time += 1
