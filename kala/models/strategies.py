@@ -4,9 +4,11 @@ from typing import Mapping, TypeVar
 
 import numpy as np
 
+from scipy.optimize import minimize
+
 # from numpy.random import Generator
 
-# from kala.utils.stats import multivariate_normal, normal
+from kala.utils.stats import get_payoffs
 
 
 class BaseStrategy(ABC):
@@ -28,12 +30,18 @@ StrategyT = TypeVar("StrategyT", bound=BaseStrategy)
 class CooperationStrategy(BaseStrategy):
     saver_encoding: Mapping[bool, str]
 
-    def __init__(self, *args, eta_differential: float = 0.1, **kwargs):
-        if not 0 < eta_differential < 1:
+    def __init__(
+        self,
+        *args,
+        differential_inefficient=0.1,
+        differential_efficient=0.15,
+        **kwargs,
+    ):
+        if not 0 < differential_efficient < 1 or not 0 < differential_inefficient < 1:
             raise ValueError("expected number between (0, 1) for 'eta_differential'")
 
-        payoff_ss = 1 + eta_differential
-        payoff_sn = 1 - eta_differential
+        payoff_ss = 1 + differential_efficient
+        payoff_sn = 1 - differential_inefficient
 
         self.payoff_matrix = {
             ("saver", "saver"): (payoff_ss, payoff_ss),
@@ -49,21 +57,20 @@ class CooperationStrategy(BaseStrategy):
     def calculate_payoff(
         self,
         *agents,
-        # risk_vars: Sequence[float],
-        # rng: Generator | None = None,
+        stochastic=False,
         **kwargs,
     ) -> tuple[float, ...]:
         if len(agents) != 2:
             raise ValueError("expected exactly two agents")
 
-        # if len(risk_vars) != 2:
-        #     raise ValueError("provide exactly two values for the variances")
+        if stochastic:
+            random_variable = np.random.lognormal(mean=1.0, sigma=1.0)
+        else:
+            random_variable = 1
 
         saver_traits = tuple(self.saver_encoding[ag.is_saver()] for ag in agents)
-        payoffs = self.payoff_matrix[saver_traits]  # np.asarray
-
-        # random_vars = multivariate_normal(mean=(1.0, 1.0), var=risk_vars, rng=rng)
-        # np.maximum(payoffs * random_vars, 0)
+        random_vars = [random_variable if ag.is_saver() else 1 for ag in agents]
+        payoffs = np.array(self.payoff_matrix[saver_traits]) * random_vars
 
         return payoffs
 

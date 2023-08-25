@@ -3,7 +3,7 @@ from typing import Any, Callable, Iterable, Sequence
 import numpy as np
 from numpy.random import Generator
 from scipy import integrate
-from scipy.optimize import fsolve
+from scipy.optimize import minimize
 from scipy.special import erf  # pylint: disable=no-name-in-module
 from scipy.stats import multivariate_normal as mvn
 
@@ -20,7 +20,10 @@ def _default_rng(rng: Generator | None = None):
 
 
 def choice(
-    lst: Iterable[Any], size: int | None = None, replace: bool = False, rng: Generator | None = None
+    lst: Iterable[Any],
+    size: int | None = None,
+    replace: bool = False,
+    rng: Generator | None = None,
 ):
     rng = _default_rng(rng)
     rng.choice(lst, size=size, replace=replace)
@@ -101,105 +104,56 @@ def multivariate_normal_truncated(
     return np.maximum(vals, threshold)
 
 
-def roots_eta_hat(
-    eta: float,
-    min_specialization: float,
-    min_consumption: float,
-    sigma: Callable,
-    d_sigma: Callable,
-    args_sigma: list,
+def condition_efficient_specialization(
+    strategy, efficient_specialization, min_specialization_i, min_specialization_j
 ):
-    """
-    Equation from which we obtain eta hat.
-    """
-    sigma_eta = sigma(eta, args_sigma)
-    d_sigma_eta = d_sigma(eta, args_sigma)
-    arg = min_consumption / (np.sqrt(2) * sigma_eta)
-    d_erf = (
-        np.sqrt(2 / np.pi)
-        * (min_consumption / (sigma_eta**2))
-        * (1 - np.exp(-1 * arg**2))
-        * d_sigma_eta
+    """Function to model the condition for the efficient specialization."""
+    value = -1 * (
+        efficient_specialization
+        + (1 - strategy) * min_specialization_i
+        + strategy * min_specialization_j
+    )
+    return value
+
+
+def get_strategy(efficient_specialization, min_specialization_i, min_specialization_j):
+    """Function to obtain a strategy given two mininimum specializations of two agents"""
+    results_strategy = minimize(
+        condition_efficient_specialization,
+        x0=0.5,
+        args=(efficient_specialization, min_specialization_i, min_specialization_j),
+        bounds=(0, 1),
     )
 
-    equation = (min_specialization + eta) * d_erf + erf(arg) - 1
-    return equation
-
-
-def kernel(x: float, y: float, sigma: float):
-    """
-    Kernel of multivariate normal distribution used to integrate.
-    """
-    arg = (x**2 + y**2) / (2 * sigma)
-    return np.exp(-1 * arg) * (arg - 1)
-
-
-def roots_eta_hat_hat(
-    eta: float,
-    min_specialization: float,
-    min_consumption: float,
-    sigma: Callable,
-    d_sigma: Callable,
-    args_sigma: list,
-):
-    """
-    Equation from which we obtain eta hat hat.
-    """
-    # FIXME: below is a hack but I don't understand why sigma returns array
-    sigma_eta = sigma(eta, args_sigma)[0]
-    d_sigma_eta = d_sigma(eta, args_sigma)
-
-    if sigma_eta > 0:
-        area = mvn.cdf(
-            [min_consumption, min_consumption],
-            mean=[0, 0],
-            cov=[[sigma_eta, 0], [0, sigma_eta]],
-        )
+    if not results_strategy.success:
+        raise Exception(results_strategy.message)
     else:
-        area = 1
-    integral = integrate.nquad(
-        kernel,
-        [[-np.inf, min_consumption], [-np.inf, min_consumption]],
-        args=[sigma_eta],
-    )[0]
-    d_area = (1 / (2 * np.pi * sigma_eta**2)) * d_sigma_eta * integral
-
-    equation = (min_specialization + eta) * d_area + area - 1
-    return equation
+        return results_strategy.x
 
 
-def get_eta_hat(
-    min_specialization: float,
-    min_consumption: float,
-    sigma: Callable,
-    d_sigma: Callable,
-    args_sigma: list,
-    x0: float = 1.0,
-):
-    """
-    Function to obtain eta hat for an individual saver.
-    """
-    eta_hat = fsolve(
-        roots_eta_hat, x0, args=(min_specialization, min_consumption, sigma, d_sigma, args_sigma)
+def get_payoffs(*agents, differential_inefficient, differential_efficient):
+    """Function to comput the payoffs given two differentials with respect to 1."""
+    if len(agents) != 2:
+        raise ValueError("expected exactly two agents")
+
+    # eta_hat
+    inefficient_specialization = 1 - differential_inefficient
+
+    # eta_hat_hat
+    min_min_specialization = min(
+        agents[0].traits["min_specialization"], agents[1].traits["min_specialization"]
     )
-    return eta_hat[0]
+    efficient_specialization = 1 - min_min_specialization + differential_efficient
 
-
-def get_eta_hat_hat(
-    min_specialization: float,
-    min_consumption: float,
-    sigma: Callable,
-    d_sigma: Callable,
-    args_sigma: list,
-    x0: float = 1.0,
-):
-    """
-    Function to obtain eta hat hat for two savers,
-    supposing that min_specialization and s are the same for both.
-    """
-    eta_hat_hat = fsolve(
-        roots_eta_hat_hat,
-        x0,
-        args=(min_specialization, min_consumption, sigma, d_sigma, args_sigma),
+    strategy = get_strategy(
+        efficient_specialization,
+        agents[0].traits["min_specialization"],
+        agents[1].traits["min_specialization"],
     )
-    return eta_hat_hat[0]
+
+    payoff_sn = inefficient_specialization
+    payoff_ss = (1 - strategy) * (
+        agents[0].traits["min_specialization"] + efficient_specialization
+    ) + strategy * (agents[1].traits["min_specialization"] + efficient_specialization)
+
+    return payoff_sn, payoff_ss
