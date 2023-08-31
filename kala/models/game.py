@@ -17,8 +17,6 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
     ----------
     time : int
         The current time of the game.
-    players : Sequence[AgentT]
-        A list of agents.
     graph : GraphT
         The graph connecting the agents.
     strategy : StrategyT
@@ -34,17 +32,17 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
     """
 
     time: int
-    players: Sequence[AgentT]
     graph: GraphT
     strategy: StrategyT
+    _players: Sequence[AgentT]
     _num_players: int
 
-    def __init__(self, strategy: StrategyT, players: Sequence[AgentT], graph: GraphT):
-        self.strategy = strategy
-        self.players = players
-        self.graph = graph
-        self._num_players = len(players)
+    def __init__(self, graph: GraphT, strategy: StrategyT):
         self.time = 0
+        self.graph = graph
+        self.strategy = strategy
+        self._players = graph._nodes
+        self._num_players = graph.num_nodes()
 
     @abstractmethod
     def match_opponents(self, seed: int | None = None) -> tuple | None:
@@ -79,7 +77,7 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
         out = 0.0
         if filt is not None:
             assert len(filt) == self._num_players, "'filt' must be the same length as players"
-        players = itertools.compress(self.players, filt) if filt is not None else self.players
+        players = itertools.compress(self._players, filt) if filt is not None else self._players
 
         for player in players:
             out += player.get_savings()
@@ -88,7 +86,7 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
 
     def reset_agents(self) -> None:
         """Reset the savings of agents to their initial state."""
-        for player in self.players:
+        for player in self._players:
             player.reset()
 
 
@@ -99,7 +97,7 @@ class DiscreteTwoByTwoGame(DiscreteBaseGame):
     """
 
     def match_opponents(self, seed: int | None = None) -> tuple | None:
-        player = choice(self.players, rng=seed)
+        player = choice(self._players, rng=seed)
 
         neighs = self.graph.get_neighbours(player)
         if len(neighs) == 0:
@@ -129,7 +127,7 @@ if __name__ == "__main__":
     # coop = CooperationStrategy()
     coop = CooperationStrategy(stochastic=True, rng=0)
 
-    game = DiscreteTwoByTwoGame(coop, agents, G)
+    game = DiscreteTwoByTwoGame(G, coop)
     print(game.get_total_wealth())
     for _ in range(5):
         game.play_round()
