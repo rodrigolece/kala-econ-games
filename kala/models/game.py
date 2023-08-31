@@ -51,20 +51,12 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
     # pylint: disable=unused-argument
     def play_round(self, *args, **kwargs) -> None:
         """Match two opponents and advance the time."""
-        players = self.match_opponents()
+        for _ in range(self._num_players // 2):
+            if (players := self.match_opponents()) is not None:
+                payoffs = self.strategy.calculate_payoff(*players, **kwargs)
 
-        if players is not None:
-            payoffs = self.strategy.calculate_payoff(*players, **kwargs)
-
-            for agent, pay in zip(players, payoffs):
-                # printing just for debug purposes
-                # TODO: remove
-                saver_str = self.strategy._saver_encoding[  # pylint: disable=protected-access
-                    agent.is_saver()
-                ]
-                print(f"Updating: {agent.uuid} ({saver_str})")
-
-                agent.update(payoff=pay)
+                for agent, pay in zip(players, payoffs):
+                    agent.update(payoff=pay)
 
         self.time += 1
 
@@ -111,7 +103,8 @@ if __name__ == "__main__":
     g = nx.barabasi_albert_graph(num_players, 8, seed=0)
     G = SimpleGraph(g, nodes=agents)
 
-    coop = CooperationStrategy()
+    # coop = CooperationStrategy()
+    coop = CooperationStrategy(stochastic=True, rng=0)
 
     game = DiscreteTwoByTwoGame(coop, agents, G)
     print(game.get_total_wealth())
