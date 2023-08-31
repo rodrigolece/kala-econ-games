@@ -18,6 +18,8 @@ class BaseProperties(ABC):
         Return the properties as a dictionary.
     update()
         Do an update of the properties.
+    reset()
+        Reset the properties to starting values.
 
     """
 
@@ -34,6 +36,10 @@ class BaseProperties(ABC):
     @abstractmethod
     def update(self, *args, **kwargs) -> None:
         """Do an update of the properties according to the class' internal rules."""
+
+    @abstractmethod
+    def reset(self) -> None:
+        """Reset the properties to starting values."""
 
     # going forward we can add other methods that are common to all Properties
 
@@ -59,6 +65,9 @@ class SaverProperties(BaseProperties):
 
     def update(self, *args, payoff: float = 1.0, **kwargs) -> None:
         self.savings += self.income_per_period * payoff
+
+    def reset(self) -> None:
+        self.savings = 0.0
 
 
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
+import itertools
 from abc import ABC, abstractmethod
 from typing import Generic, Sequence
 from warnings import warn
@@ -28,6 +29,7 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
     match_opponents()
     play_round()
     get_total_wealth()
+    reset_agents()
 
     """
 
@@ -60,13 +62,34 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
 
         self.time += 1
 
-    def get_total_wealth(self) -> float:
-        """Sum the total savings of all the agents."""
+    def get_total_wealth(self, filt: Sequence[bool] = None) -> float:
+        """
+        Sum the total savings of all the players.
+
+        Parameters
+        ----------
+        filt : Sequence[bool], optional
+            A sequence of booleans to keep a subset of the players.
+
+        Returns
+        -------
+        float
+
+        """
         out = 0.0
-        for player in self.players:
+        if filt is not None:
+            assert len(filt) == self._num_players, "'filt' must be the same length as players"
+        players = itertools.compress(self.players, filt) if filt is not None else self.players
+
+        for player in players:
             out += player.get_savings()
 
         return out
+
+    def reset_agents(self) -> None:
+        """Reset the savings of agents to their initial state."""
+        for player in self.players:
+            player.reset()
 
 
 class DiscreteTwoByTwoGame(DiscreteBaseGame):

@@ -113,6 +113,7 @@ class InvestorAgent(BaseAgent):
     -------
     update()
     get_savings()
+    reset()
 
     """
 
@@ -150,6 +151,9 @@ class InvestorAgent(BaseAgent):
 
     def update(self, *args, **kwargs) -> None:
         self._properties.update(*args, **kwargs)
+
+    def reset(self) -> None:
+        self._properties.reset()
 
     def get_savings(self) -> float:
         """Handy direct access to property savings."""
