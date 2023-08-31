@@ -39,6 +39,7 @@ class BaseAgent(ABC, Generic[TraitsT, PropertiesT]):
     get_property()
     get_trait()
     update()
+    reset()
 
     """
 
@@ -99,6 +100,10 @@ class BaseAgent(ABC, Generic[TraitsT, PropertiesT]):
     @abstractmethod
     def update(self, *args, **kwargs) -> None:
         """Play one round of the game."""
+
+    @abstractmethod
+    def reset(self) -> None:
+        """Reset the agent to starting values."""
 
 
 AgentT = TypeVar("AgentT", bound=BaseAgent)
