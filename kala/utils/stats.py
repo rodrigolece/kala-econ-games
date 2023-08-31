@@ -1,11 +1,10 @@
-from typing import Any, Callable, Iterable, Sequence
+from typing import Any, Iterable, Sequence
 
 import numpy as np
 from numpy.random import Generator
-from scipy import integrate
 from scipy.optimize import minimize
-from scipy.special import erf  # pylint: disable=no-name-in-module
-from scipy.stats import multivariate_normal as mvn
+
+# from scipy.special import erf  # pylint: disable=no-name-in-module
 
 
 def _default_rng(rng: Generator | None = None):

@@ -72,16 +72,21 @@ class CooperationStrategy(BaseStrategy):
         stochastic : bool, optional
             Whether to use a stochastic payoff matrix, by default False.
         differential_inefficient : float, optional
-            The amount by which a saver is less efficient when encountering a non-savers, by default 0.1.
+            The amount by which a saver is less efficient when encountering non-savers,
+            by default 0.1.
         differential_efficient : float, optional
-            The amount by which a saver is more efficient when encountering a saver, by default 0.15.
+            The amount by which a saver is more efficient when encountering another saver,
+            by default 0.15.
         min_specialization : float, optional
-            The minimum specialization of savers. NB: our implementation of the more general model assumes
-            the special case of the minimum specialization being equal for all agents.
+            The minimum specialization of savers. NB: our implementation of the more
+            general model assumes the special case of the minimum specialization
+            being equal for all agents.
         dist_mean : float, optional
-            The mean of the lognormal distribution used to generate stochastic payoffs, by default 1.0.
+            The mean of the lognormal distribution used to generate stochastic payoffs,
+            by default 1.0.
         dist_sigma : float, optional
-            The sigma of the lognormal distribution used to generate stochastic payoffs, by default 1.0.
+            The sigma of the lognormal distribution used to generate stochastic payoffs,
+            by default 1.0.
         rng : Generator, optional
             A numpy random number generator, by default None.
 

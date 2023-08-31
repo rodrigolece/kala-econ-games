@@ -60,7 +60,7 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
 
         self.time += 1
 
-    def get_total_wealth(self, filt: Sequence[bool] = None) -> float:
+    def get_total_wealth(self, filt: Sequence[bool] | None = None) -> float:
         """
         Sum the total savings of all the players.
 
@@ -80,7 +80,7 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
         players = itertools.compress(self._players, filt) if filt is not None else self._players
 
         for player in players:
-            out += player.get_savings()
+            out += player.get_trait("savings")
 
         return out
 
