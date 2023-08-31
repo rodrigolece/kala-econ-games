@@ -1,3 +1,4 @@
+import itertools
 from abc import ABC, abstractmethod
 from typing import Generic, Sequence
 from warnings import warn
@@ -16,8 +17,6 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
     ----------
     time : int
         The current time of the game.
-    players : Sequence[AgentT]
-        A list of agents.
     graph : GraphT
         The graph connecting the agents.
     strategy : StrategyT
@@ -28,21 +27,22 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
     match_opponents()
     play_round()
     get_total_wealth()
+    reset_agents()
 
     """
 
     time: int
-    players: Sequence[AgentT]
     graph: GraphT
     strategy: StrategyT
+    _players: Sequence[AgentT]
     _num_players: int
 
-    def __init__(self, strategy: StrategyT, players: Sequence[AgentT], graph: GraphT):
-        self.strategy = strategy
-        self.players = players
-        self.graph = graph
-        self._num_players = len(players)
+    def __init__(self, graph: GraphT, strategy: StrategyT):
         self.time = 0
+        self.graph = graph
+        self.strategy = strategy
+        self._players = graph._nodes
+        self._num_players = graph.num_nodes()
 
     @abstractmethod
     def match_opponents(self, seed: int | None = None) -> tuple | None:
@@ -51,30 +51,43 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
     # pylint: disable=unused-argument
     def play_round(self, *args, **kwargs) -> None:
         """Match two opponents and advance the time."""
-        players = self.match_opponents()
+        for _ in range(self._num_players // 2):
+            if (players := self.match_opponents()) is not None:
+                payoffs = self.strategy.calculate_payoff(*players, **kwargs)
 
-        if players is not None:
-            payoffs = self.strategy.calculate_payoff(*players, **kwargs)
-
-            for agent, pay in zip(players, payoffs):
-                # printing just for debug purposes
-                # TODO: remove
-                saver_str = self.strategy._saver_encoding[  # pylint: disable=protected-access
-                    agent.is_saver()
-                ]
-                print(f"Updating: {agent.uuid} ({saver_str})")
-
-                agent.update(payoff=pay)
+                for agent, pay in zip(players, payoffs):
+                    agent.update(payoff=pay)
 
         self.time += 1
 
-    def get_total_wealth(self) -> float:
-        """Sum the total savings of all the agents."""
+    def get_total_wealth(self, filt: Sequence[bool] = None) -> float:
+        """
+        Sum the total savings of all the players.
+
+        Parameters
+        ----------
+        filt : Sequence[bool], optional
+            A sequence of booleans to keep a subset of the players.
+
+        Returns
+        -------
+        float
+
+        """
         out = 0.0
-        for player in self.players:
+        if filt is not None:
+            assert len(filt) == self._num_players, "'filt' must be the same length as players"
+        players = itertools.compress(self._players, filt) if filt is not None else self._players
+
+        for player in players:
             out += player.get_savings()
 
         return out
+
+    def reset_agents(self) -> None:
+        """Reset the savings of agents to their initial state."""
+        for player in self._players:
+            player.reset()
 
 
 class DiscreteTwoByTwoGame(DiscreteBaseGame):
@@ -84,7 +97,7 @@ class DiscreteTwoByTwoGame(DiscreteBaseGame):
     """
 
     def match_opponents(self, seed: int | None = None) -> tuple | None:
-        player = choice(self.players, rng=seed)
+        player = choice(self._players, rng=seed)
 
         neighs = self.graph.get_neighbours(player)
         if len(neighs) == 0:
@@ -111,9 +124,10 @@ if __name__ == "__main__":
     g = nx.barabasi_albert_graph(num_players, 8, seed=0)
     G = SimpleGraph(g, nodes=agents)
 
-    coop = CooperationStrategy()
+    # coop = CooperationStrategy()
+    coop = CooperationStrategy(stochastic=True, rng=0)
 
-    game = DiscreteTwoByTwoGame(coop, agents, G)
+    game = DiscreteTwoByTwoGame(G, coop)
     print(game.get_total_wealth())
     for _ in range(5):
         game.play_round()

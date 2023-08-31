@@ -11,6 +11,12 @@ class BaseGraph(ABC, Generic[AgentT]):
     """
     Our graph interface independent of the library used for implementation.
 
+    Methods
+    -------
+    get_node()
+    get_neighbours()
+    num_nodes()
+
     """
 
     _graph: Any
@@ -28,6 +34,10 @@ class BaseGraph(ABC, Generic[AgentT]):
     def get_neighbors(self, node: AgentT | int | str) -> Sequence[AgentT]:
         """Alias of the method get_neighbours."""
         return self.get_neighbours(node)
+
+    def num_nodes(self) -> int:
+        """Return the number of nodes in the graph."""
+        return len(self._nodes)
 
 
 GraphT = TypeVar("GraphT", bound=BaseGraph)
