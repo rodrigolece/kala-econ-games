@@ -76,11 +76,17 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
         """
         out = 0.0
         if filt is not None:
-            assert len(filt) == self._num_players, "'filt' must be the same length as players"
-        players = itertools.compress(self._players, filt) if filt is not None else self._players
+            assert (
+                len(filt) == self._num_players
+            ), "'filt' must be the same length as players"
+        players = (
+            itertools.compress(self._players, filt)
+            if filt is not None
+            else self._players
+        )
 
         for player in players:
-            out += player.get_trait("savings")
+            out += player.get_property("savings")
 
         return out
 
