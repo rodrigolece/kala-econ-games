@@ -1,6 +1,6 @@
 """Module defining agent strategies."""
 from abc import ABC, abstractmethod
-from typing import Mapping, TypeVar
+from typing import Callable, Mapping, TypeVar
 
 import numpy as np
 from numpy.random import Generator
@@ -51,6 +51,8 @@ class CooperationStrategy(BaseStrategy):
 
     """
 
+    _sigma: Mapping[tuple[str, ...], float]
+
     # pylint: disable=unused-argument
     def __init__(
         self,
@@ -60,7 +62,7 @@ class CooperationStrategy(BaseStrategy):
         differential_efficient: float = 0.15,
         min_specialization: float = 0.0,
         dist_mean: float = 1.0,
-        dist_sigma: float = 1.0,
+        dist_sigma_func: Callable = lambda x: x,
         rng: Generator | None = None,
         **kwargs,
     ):
@@ -84,9 +86,10 @@ class CooperationStrategy(BaseStrategy):
         dist_mean : float, optional
             The mean of the lognormal distribution used to generate stochastic payoffs,
             by default 1.0.
-        dist_sigma : float, optional
-            The sigma of the lognormal distribution used to generate stochastic payoffs,
-            by default 1.0.
+        dist_sigma_func : Callable, optional
+            A function that maps specializations (efficient and inefficient) to the
+            standard deviation of the lognormal distribution. By default, the function
+            is the identity function.
         rng : Generator, optional
             A numpy random number generator, by default None.
 
@@ -124,7 +127,12 @@ class CooperationStrategy(BaseStrategy):
 
         self._rng = rng
         self._mean = dist_mean
-        self._sigma = dist_sigma
+        self._sigma = {
+            ("saver", "saver"): dist_sigma_func(payoff_ss),
+            ("saver", "non-saver"): dist_sigma_func(payoff_sn),
+            ("non-saver", "saver"): dist_sigma_func(payoff_sn),
+            ("non-saver", "non-saver"): 1,
+        }
         # TODO: more elegant solution would be to accept initialized distribution that
         # doesn't need parameters and is ready to return random numbers
 
@@ -141,7 +149,8 @@ class CooperationStrategy(BaseStrategy):
         payoffs = np.asarray(self.payoff_matrix[saver_traits])
 
         if self.stochastic:
-            draw = lognormal(mean=self._mean, sigma=self._sigma, rng=self._rng)
+            sigma = self._sigma[saver_traits]
+            draw = lognormal(mean=self._mean, sigma=sigma, rng=self._rng)
             payoffs *= [draw if ag.is_saver() else 1 for ag in agents]
 
         return tuple(payoffs)
