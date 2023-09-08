@@ -61,7 +61,7 @@ class CooperationStrategy(BaseStrategy):
         differential_inefficient: float = 0.1,
         differential_efficient: float = 0.15,
         min_specialization: float = 0.0,
-        dist_mean: float = 1.0,
+        dist_mean: float = 0.0,
         dist_sigma_func: Callable = lambda x: x,
         rng: Generator | int | None = None,
         **kwargs,
