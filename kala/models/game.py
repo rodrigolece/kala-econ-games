@@ -3,6 +3,9 @@ from abc import ABC, abstractmethod
 from typing import Generic, Sequence
 from warnings import warn
 
+import numpy as np
+from numpy.random import Generator
+
 from kala.models.agents import AgentT
 from kala.models.graphs import GraphT
 from kala.models.strategies import StrategyT
@@ -45,14 +48,17 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
         self._num_players = graph.num_nodes()
 
     @abstractmethod
-    def match_opponents(self, seed: int | None = None) -> tuple | None:
+    def match_opponents(self, rng: Generator | int | None = None, **kwargs) -> tuple | None:
         """Return a pair of matched opponents."""
 
     # pylint: disable=unused-argument
     def play_round(self, *args, **kwargs) -> None:
         """Match two opponents and advance the time."""
+        if (rng := kwargs.get("rng", None)) is not None:
+            kwargs["rng"] = np.random.default_rng(rng)
+
         for _ in range(self._num_players // 2):
-            if (players := self.match_opponents()) is not None:
+            if (players := self.match_opponents(**kwargs)) is not None:
                 payoffs = self.strategy.calculate_payoff(*players, **kwargs)
 
                 for agent, pay in zip(players, payoffs):
@@ -96,15 +102,16 @@ class DiscreteTwoByTwoGame(DiscreteBaseGame):
 
     """
 
-    def match_opponents(self, seed: int | None = None) -> tuple | None:
-        player = choice(self._players, rng=seed)
+    def match_opponents(self, rng: Generator | int | None = None, **kwargs) -> tuple | None:
+        player = choice(self._players, rng=rng)
 
         neighs = self.graph.get_neighbours(player)
         if len(neighs) == 0:
             warn("selected player does not have any neighbours")
             return None
 
-        opponent = choice(neighs)
+        opponent = choice(neighs, rng=rng)
+        # print( f"{player.uuid} ({player.get_trait('is_saver')}) - {opponent.uuid} ({opponent.get_trait('is_saver')})" )
         return player, opponent
 
 
@@ -119,7 +126,7 @@ if __name__ == "__main__":
 
     # A list of InvestorAgents
     savers = [True, False] * 5
-    agents = [InvestorAgent(is_saver=savers[i]) for i in range(num_players)]
+    agents = [InvestorAgent(is_saver=savers[i], rng=i) for i in range(num_players)]
 
     g = nx.barabasi_albert_graph(num_players, 8, seed=0)
     G = SimpleGraph(g, nodes=agents)
@@ -129,6 +136,7 @@ if __name__ == "__main__":
 
     game = DiscreteTwoByTwoGame(G, coop)
     print(game.get_total_wealth())
+
     for _ in range(5):
         game.play_round()
         print(game.get_total_wealth())

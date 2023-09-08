@@ -5,7 +5,7 @@ from typing import Callable, Mapping, TypeVar
 import numpy as np
 from numpy.random import Generator
 
-from kala.utils.stats import lognormal
+from kala.utils.stats import get_random_state, lognormal
 
 
 class BaseStrategy(ABC):
@@ -63,7 +63,7 @@ class CooperationStrategy(BaseStrategy):
         min_specialization: float = 0.0,
         dist_mean: float = 1.0,
         dist_sigma_func: Callable = lambda x: x,
-        rng: Generator | None = None,
+        rng: Generator | int | None = None,
         **kwargs,
     ):
         """
@@ -125,7 +125,7 @@ class CooperationStrategy(BaseStrategy):
         self._saver_encoding = {True: "saver", False: "non-saver"}
         # used to map the trait is_saver to the payoff matrix entries
 
-        self._rng = rng
+        self._rng = get_random_state(rng)
         self._mean = dist_mean
         self._sigma = {
             ("saver", "saver"): dist_sigma_func(payoff_ss),
@@ -162,7 +162,8 @@ if __name__ == "__main__":
     saver = InvestorAgent(is_saver=True)
     non_saver = InvestorAgent(is_saver=False)
 
-    strategy = CooperationStrategy(stochastic=True, rng=0)
+    strategy = CooperationStrategy(stochastic=True, rng=0, dist_sigma_func=lambda x: 1e-1)
+
     print(strategy.calculate_payoff(saver, saver))
     print(strategy.calculate_payoff(saver, non_saver))
     print(strategy.calculate_payoff(non_saver, saver))

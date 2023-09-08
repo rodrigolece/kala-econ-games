@@ -4,7 +4,7 @@ import string
 
 
 # TODO: pass rng
-def universally_unique_identifier(length: int = 6) -> str:
+def universally_unique_identifier(length: int = 6, rng: int | None = None) -> str:
     """
     Generate an identifier random string (no guarantees are made wrt clashes).
 
@@ -12,6 +12,8 @@ def universally_unique_identifier(length: int = 6) -> str:
     ----------
     length : int, optional
         The number of characters in the string, by default 6.
+    rng : int, optional
+        A seed for the random number generator, by default None.
 
     Returns
     -------
@@ -20,6 +22,9 @@ def universally_unique_identifier(length: int = 6) -> str:
     """
     if length <= 1:
         raise ValueError("choose length > 1")
+
+    if rng:
+        random.seed(rng)
 
     first = random.choice(string.ascii_lowercase)
     rest = "".join(random.sample(string.ascii_letters + string.digits, k=length - 1))

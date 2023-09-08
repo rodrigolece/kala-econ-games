@@ -7,13 +7,15 @@ from scipy.optimize import minimize
 # from scipy.special import erf  # pylint: disable=no-name-in-module
 
 
-def _default_rng(rng: Generator | None = None):
+def get_random_state(rng: Generator | int | None = None):
     """If rng is already a Generator, pass-through; otherwise return default."""
 
     if rng is None:
         rng = np.random.default_rng()
     elif isinstance(rng, int):
         rng = np.random.default_rng(rng)
+    elif isinstance(rng, Generator):
+        pass
 
     return rng
 
@@ -22,9 +24,9 @@ def choice(
     lst: Iterable[Any],
     size: int | None = None,
     replace: bool = False,
-    rng: Generator | None = None,
+    rng: Generator | int | None = None,
 ):
-    rng = _default_rng(rng)
+    rng = get_random_state(rng)
     rng.choice(lst, size=size, replace=replace)
 
     return rng.choice(lst, size=size, replace=replace)
@@ -34,13 +36,13 @@ def normal(
     mean: float,
     sigma: float,
     size: int | None = None,
-    rng: Generator | None = None,
+    rng: Generator | int | None = None,
 ) -> float | np.ndarray:
     """
     Thin wrapper around NumPy's normal distribution.
 
     """
-    rng = _default_rng(rng)
+    rng = get_random_state(rng)
 
     return rng.normal(loc=mean, scale=sigma, size=size)
 
@@ -66,7 +68,7 @@ def multivariate_normal(
     var: Sequence[float] | None = None,
     cov: np.ndarray | None = None,
     size: int | None = None,
-    rng: Generator | None = None,
+    rng: Generator | int | None = None,
 ):
     """
     Thin wrapper around NumPy's multivariate normal distribution.
@@ -74,7 +76,7 @@ def multivariate_normal(
     NB: Exactly one of vars or cov must be non-null.
 
     """
-    rng = _default_rng(rng)
+    rng = get_random_state(rng)
     mean = np.asarray(mean)
 
     if var is not None:
@@ -107,13 +109,13 @@ def lognormal(
     mean: float,
     sigma: float,
     size: int | None = None,
-    rng: Generator | None = None,
+    rng: Generator | int | None = None,
 ) -> float | np.ndarray:
     """
     Thin wrapper around NumPy's log-normal distribution.
 
     """
-    rng = _default_rng(rng)
+    rng = get_random_state(rng)
 
     return rng.lognormal(mean, sigma, size)
 

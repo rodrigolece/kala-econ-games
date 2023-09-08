@@ -53,11 +53,12 @@ class BaseAgent(ABC, Generic[TraitsT, PropertiesT]):
         traits: TraitsT,
         properties: PropertiesT,
         uuid: int | str | None = None,
+        rng: int | None = None,
     ) -> None:
         self._traits = traits
         self._properties = properties
         if uuid is None:
-            uuid = universally_unique_identifier()
+            uuid = universally_unique_identifier(rng=rng)
         self.uuid = uuid
 
     def __hash__(self):
@@ -127,6 +128,7 @@ class InvestorAgent(BaseAgent):
         is_saver: bool,
         min_specialization: float = 0.0,
         income_per_period: float = 1.0,
+        rng: int | None = None,
     ):
         """Initialise new investor agent.
 
@@ -152,7 +154,7 @@ class InvestorAgent(BaseAgent):
             income_per_period=income_per_period,
         )
 
-        super().__init__(traits=traits, properties=props)
+        super().__init__(traits=traits, properties=props, rng=rng)
 
     def update(self, *args, **kwargs) -> None:
         self._properties.update(*args, **kwargs)
