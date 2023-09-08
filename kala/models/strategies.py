@@ -60,7 +60,6 @@ class CooperationStrategy(BaseStrategy):
         stochastic: bool = False,
         differential_inefficient: float = 0.1,
         differential_efficient: float = 0.15,
-        min_specialization: float = 0.0,
         dist_mean: float = 0.0,
         dist_sigma_func: Callable = lambda x: x,
         rng: Generator | int | None = None,
@@ -79,10 +78,6 @@ class CooperationStrategy(BaseStrategy):
         differential_efficient : float, optional
             The amount by which a saver is more efficient when encountering another saver,
             by default 0.15.
-        min_specialization : float, optional
-            The minimum specialization of savers. NB: our implementation of the more
-            general model assumes the special case of the minimum specialization
-            being equal for all agents.
         dist_mean : float, optional
             The mean of the lognormal distribution used to generate stochastic payoffs,
             by default 1.0.
@@ -106,14 +101,11 @@ class CooperationStrategy(BaseStrategy):
         if differential_efficient <= 0:
             raise ValueError("expected number greater than 0 for 'differential_efficient'")
 
-        if not 0 <= min_specialization < 1:
-            raise ValueError("expected number between [0, 1) for 'min_specialization'")
-
         # Initialize
         self.stochastic = stochastic
 
-        payoff_ss = 1 + differential_efficient - min_specialization
-        payoff_sn = 1 - differential_inefficient - min_specialization
+        payoff_ss = 1 + differential_efficient
+        payoff_sn = 1 - differential_inefficient
 
         self.payoff_matrix = {
             ("saver", "saver"): (payoff_ss, payoff_ss),
