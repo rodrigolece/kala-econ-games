@@ -112,7 +112,7 @@ class DiscreteTwoByTwoGame(DiscreteBaseGame):
             return None
 
         opponent = choice(neighs, rng=rng)
-        # print( f"{player.uuid} ({player.get_trait('is_saver')}) - {opponent.uuid} ({opponent.get_trait('is_saver')})" )
+        # print(f"{p.uuid} ({p.get_trait('is_saver')}) - {o.uuid} ({o.get_trait('is_saver')})")
         return player, opponent
 
 

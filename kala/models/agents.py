@@ -141,6 +141,9 @@ class InvestorAgent(BaseAgent):
             The minimum specialization (default is 0.0).
         income_per_period : float
             The income per period (default is 1.0).
+        update_from_n_last_games : int
+            The number of previous outcomes kept in memory to decide whether to
+            change the saving strategy (default is 0).
         """
 
         traits = SaverTraits(
@@ -149,7 +152,6 @@ class InvestorAgent(BaseAgent):
             min_consumption=0,  # not being used
             min_specialization=min_specialization,
             updates_from_n_last_games=update_from_n_last_games,
-            memory=[],
         )
 
         props = SaverProperties(
@@ -180,14 +182,15 @@ if __name__ == "__main__":
     assert agent.is_saver()
     print(f"Hello from agent {agent.uuid}!")
 
-    # agent.update(payoff=2, did_i_win=True)
-    # assert agent.get_savings() == 2
-    # agent.update(payoff=0.5, did_i_win=False)
-    # assert agent.get_savings() == 2.5
+    agent.update(payoff=2, did_i_win=True)
+    assert agent.get_savings() == 2
+    agent.update(payoff=0.5, did_i_win=False)
+    assert agent.get_savings() == 2.5
 
-    p = InvestorAgent(is_saver=True, update_from_n_last_games=4)
-    p.get_trait("is_saver")
+    is_saver = False
+    agent_w_memory = InvestorAgent(is_saver=is_saver, update_from_n_last_games=4)
+    expected_states = [is_saver] * 3 + [not is_saver] * 2
 
-    for _ in range(5):
-        p.update(payoff=1.0, did_i_win=False)
-        print(p.get_trait("is_saver"))
+    for i in range(5):
+        agent_w_memory.update(payoff=1.0, did_i_win=False)
+        assert agent_w_memory.is_saver() == expected_states[i]
