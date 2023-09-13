@@ -127,6 +127,7 @@ class InvestorAgent(BaseAgent):
         is_saver: bool,
         min_specialization: float = 0.0,
         income_per_period: float = 1.0,
+        update_from_n_last_games: int = 0,
     ):
         """Initialise new investor agent.
 
@@ -145,6 +146,8 @@ class InvestorAgent(BaseAgent):
             is_saver=is_saver,
             min_consumption=0,  # not being used
             min_specialization=min_specialization,
+            updates_from_n_last_games=update_from_n_last_games,
+            memory=[],
         )
 
         props = SaverProperties(
@@ -156,6 +159,7 @@ class InvestorAgent(BaseAgent):
 
     def update(self, *args, **kwargs) -> None:
         self._properties.update(*args, **kwargs)
+        self._traits.update(*args, **kwargs)
 
     def reset(self) -> None:
         self._properties.reset()
@@ -174,7 +178,14 @@ if __name__ == "__main__":
     assert agent.is_saver()
     print(f"Hello from agent {agent.uuid}!")
 
-    agent.update(payoff=2)
-    assert agent.get_savings() == 2
-    agent.update(payoff=0.5)
-    assert agent.get_savings() == 2.5
+    # agent.update(payoff=2, did_i_win=True)
+    # assert agent.get_savings() == 2
+    # agent.update(payoff=0.5, did_i_win=False)
+    # assert agent.get_savings() == 2.5
+
+    p = InvestorAgent(is_saver=True, update_from_n_last_games=4)
+    p.get_trait("is_saver")
+
+    for _ in range(5):
+        p.update(payoff=1.0, did_i_win=False)
+        print(p.get_trait("is_saver"))
