@@ -51,14 +51,36 @@ class SaverTraits(BaseAgentTraits):
     is_saver: bool
     min_consumption: float
     min_specialization: float
+    updates_from_n_last_games: int
+    memory: list
+
+    def update(self, did_i_win: bool, *args, **kwargs) -> None:
+        if len(self.memory) > self.updates_from_n_last_games:
+            self.memory.pop(0)
+        self.memory.append(did_i_win)
+
+        if len(self.memory) == self.updates_from_n_last_games:
+            if sum(self.memory) < self.updates_from_n_last_games / 2:
+                new_status = not self.is_saver
+                self.is_saver = new_status
 
     def __post_init__(self):
         if not 0 <= self.min_specialization <= 1:
             raise ValueError("expected number between [0, 1] (inclusive) for 'min_specialization'")
 
+        if self.updates_from_n_last_games < 0:
+            raise ValueError("expected positive number (integer)")
+
 
 if __name__ == "__main__":
-    st = SaverTraits(group=0, is_saver=True, min_consumption=1, min_specialization=0.1)
+    st = SaverTraits(
+        group=0,
+        is_saver=True,
+        min_consumption=1,
+        min_specialization=0.1,
+        updates_from_n_last_games=0,
+        memory=[],
+    )
     st_dict = st.to_dict()
     assert st.group == 0
     assert st_dict["group"] == st.group
