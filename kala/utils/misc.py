@@ -3,7 +3,6 @@ import random
 import string
 
 
-# TODO: pass rng
 def universally_unique_identifier(length: int = 6, rng: int | None = None) -> str:
     """
     Generate an identifier random string (no guarantees are made wrt clashes).

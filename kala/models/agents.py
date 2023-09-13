@@ -123,6 +123,7 @@ class InvestorAgent(BaseAgent):
 
     """
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
         is_saver: bool,
@@ -167,6 +168,7 @@ class InvestorAgent(BaseAgent):
 
     def reset(self) -> None:
         self._properties.reset()
+        self._traits.reset()
 
     def get_savings(self) -> float:
         """Handy direct access to property savings."""
@@ -178,19 +180,25 @@ class InvestorAgent(BaseAgent):
 
 
 if __name__ == "__main__":
+    import numpy as np
+
     agent = InvestorAgent(is_saver=True)
     assert agent.is_saver()
     print(f"Hello from agent {agent.uuid}!")
 
-    agent.update(payoff=2, did_i_win=True)
+    agent.update(payoff=2)
     assert agent.get_savings() == 2
-    agent.update(payoff=0.5, did_i_win=False)
+    agent.update(payoff=0.5)
     assert agent.get_savings() == 2.5
 
-    is_saver = False
-    agent_w_memory = InvestorAgent(is_saver=is_saver, update_from_n_last_games=4)
-    expected_states = [is_saver] * 3 + [not is_saver] * 2
+    n_games = 5
+    agent_w_memory = InvestorAgent(is_saver=False, update_from_n_last_games=n_games)
+    print(f"Hello from agent {agent_w_memory.uuid} with {n_games} games of memory!")
 
-    for i in range(5):
-        agent_w_memory.update(payoff=1.0, did_i_win=False)
+    a = np.array([False] * (n_games - 1) + [True])
+    expected_states = np.hstack((a, ~a))
+
+    for i in range(2 * n_games):
+        agent_w_memory.update(payoff=1.0, successful_round=False)
+        # print("\tis saver:", agent_w_memory.is_saver())
         assert agent_w_memory.is_saver() == expected_states[i]

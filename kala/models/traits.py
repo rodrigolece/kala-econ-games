@@ -1,6 +1,7 @@
 """Module defining agent traits"""
 from abc import ABC
-from dataclasses import asdict, dataclass, field
+from collections import deque
+from dataclasses import asdict, dataclass
 from typing import Any, TypeVar
 
 
@@ -46,7 +47,7 @@ class SaverTraits(BaseAgentTraits):
     min_consumption: float
     min_specialization: float
     updates_from_n_last_games: int
-    memory: list[bool]
+    memory: deque | None
     """
 
     group: int
@@ -54,24 +55,46 @@ class SaverTraits(BaseAgentTraits):
     min_consumption: float
     min_specialization: float
     updates_from_n_last_games: int
-    memory: list[bool] = field(default_factory=list)
+    memory: deque | None = None
+    # TODO: we should move 'memory' to properties bcs we shouldn't really have
+    # the 'update' and 'reset' methods below
 
     def __post_init__(self):
         if not 0 <= self.min_specialization <= 1:
             raise ValueError("expected number between [0, 1] (inclusive) for 'min_specialization'")
 
-        if self.updates_from_n_last_games < 0:
-            raise ValueError("expected positive number (integer)")
+        if self.updates_from_n_last_games < 0 or not isinstance(
+            self.updates_from_n_last_games, int
+        ):
+            raise ValueError("expected non-negative integer for 'updates_from_n_last_games'")
 
-    def update(self, did_i_win: bool, *args, **kwargs) -> None:
-        if len(self.memory) > self.updates_from_n_last_games:
-            self.memory.pop(0)
-        self.memory.append(did_i_win)
+        # initialise memory
+        if self.memory is None and self.updates_from_n_last_games > 0:
+            self.memory = deque([], maxlen=self.updates_from_n_last_games)
 
-        if len(self.memory) == self.updates_from_n_last_games:
-            if sum(self.memory) < self.updates_from_n_last_games / 2:
-                new_status = not self.is_saver
-                self.is_saver = new_status
+    # pylint: disable=unused-argument
+    def update(self, *args, **kwargs) -> None:
+        """Update the is_saver attribute depending on updating rule and memory."""
+        if self.updates_from_n_last_games == 0:
+            return
+
+        if (successful_round := kwargs.get("successful_round", None)) is None:
+            raise ValueError("expected 'successful_round' keyword argument")
+
+        memory: deque = self.memory  # type: ignore[assignment]
+        memory.append(successful_round)
+        n = memory.maxlen  # pylint: disable=invalid-name, type: ignore[override]
+
+        if len(memory) == n and sum(memory) < n / 2:
+            # TODO: for debug, get rid of print below
+            print(f"user is flipping: {self.is_saver}->{not self.is_saver}")
+            self.is_saver = not self.is_saver
+            self.memory = deque([], maxlen=self.updates_from_n_last_games)
+
+    def reset(self) -> None:
+        """Reset the agent memory."""
+        if self.memory is not None:
+            self.memory = deque([], maxlen=self.updates_from_n_last_games)
 
 
 if __name__ == "__main__":
@@ -80,7 +103,7 @@ if __name__ == "__main__":
         is_saver=True,
         min_consumption=1,
         min_specialization=0.1,
-        updates_from_n_last_games=0,
+        updates_from_n_last_games=2,
     )
     st_dict = st.to_dict()
     assert st.group == 0
@@ -91,3 +114,8 @@ if __name__ == "__main__":
     assert st_dict["min_consumption"] == st.min_consumption
     assert st.min_specialization == 0.1
     assert st_dict["min_specialization"] == st.min_specialization
+
+    st.update(successful_round=1)
+    st.update(successful_round=2)
+    st.update(successful_round=3)  # this should push out the first value
+    assert list(st.memory) == [2, 3]  # type: ignore

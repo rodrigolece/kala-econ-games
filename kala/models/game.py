@@ -30,6 +30,8 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
     match_opponents()
     play_round()
     get_total_wealth()
+    get_savers()
+    get_number_of_savers()
     reset_agents()
 
     """
@@ -60,10 +62,10 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
         for _ in range(self._num_players // 2):
             if (players := self.match_opponents(**kwargs)) is not None:
                 payoffs = self.strategy.calculate_payoff(*players, **kwargs)
-                who_won = np.array(payoffs) <= max(payoffs)
+                achieved_max_payoff = np.array(payoffs) == max(payoffs)
 
-                for agent, pay, did_i_win in zip(players, payoffs, who_won):
-                    agent.update(payoff=pay, did_i_win=did_i_win)
+                for agent, pay, success in zip(players, payoffs, achieved_max_payoff):
+                    agent.update(payoff=pay, successful_round=success)
 
         self.time += 1
 
@@ -90,6 +92,28 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
             out += player.get_property("savings")
 
         return out
+
+    def get_savers(self) -> Sequence[AgentT]:
+        """
+        Return a list of savers.
+
+        Returns
+        -------
+        Sequence[AgentT]
+
+        """
+        return [player for player in self._players if player.get_trait("is_saver")]
+
+    def get_number_of_savers(self) -> int:
+        """
+        Return the number of savers.
+
+        Returns
+        -------
+        int
+
+        """
+        return len(self.get_savers())
 
     def reset_agents(self) -> None:
         """Reset the savings of agents to their initial state."""
@@ -126,18 +150,25 @@ if __name__ == "__main__":
     num_players = 10
 
     # A list of InvestorAgents
-    savers = [True, False] * 5
-    agents = [InvestorAgent(is_saver=savers[i], rng=i) for i in range(num_players)]
+    savers = [True, False] * (num_players // 2)
+    agents = [
+        InvestorAgent(is_saver=savers[i], update_from_n_last_games=1, rng=i)
+        for i in range(num_players)
+    ]
 
     g = nx.barabasi_albert_graph(num_players, 8, seed=0)
     G = SimpleGraph(g, nodes=agents)
 
     # coop = CooperationStrategy()
-    coop = CooperationStrategy(stochastic=True, rng=0)
+    coop = CooperationStrategy(
+        stochastic=True, differential_efficient=0.5, differential_inefficient=0.05, rng=0
+    )
 
     game = DiscreteTwoByTwoGame(G, coop)
-    print(game.get_total_wealth())
+    wealth, num_savers = game.get_total_wealth(), game.get_number_of_savers()
+    print(f"Init: wealth={wealth:.2f}, {num_savers=}")
 
-    for _ in range(5):
+    for _ in range(10):
         game.play_round()
-        print(game.get_total_wealth())
+        wealth, num_savers = game.get_total_wealth(), game.get_number_of_savers()
+        print(f"wealth={wealth:.2f}, {num_savers=}")
