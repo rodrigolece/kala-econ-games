@@ -81,11 +81,13 @@ class SaverTraits(BaseAgentTraits):
         if (successful_round := kwargs.get("successful_round", None)) is None:
             raise ValueError("expected 'successful_round' keyword argument")
 
-        memory: deque = self.memory  # type: ignore[assignment]
-        memory.append(successful_round)
-        n = memory.maxlen  # pylint: disable=invalid-name, type: ignore[override]
+        if (update_rule := kwargs.get("update_rule", None)) is None:
+            raise ValueError("expected 'update_rule' keyword argument")
 
-        if len(memory) == n and sum(memory) < n / 2:
+        memory: deque = self.memory  # type: ignore
+        memory.append(successful_round)
+
+        if update_rule.should_update(memory):
             # TODO: for debug, get rid of print below
             print(f"user is flipping: {self.is_saver}->{not self.is_saver}")
             self.is_saver = not self.is_saver
@@ -98,7 +100,9 @@ class SaverTraits(BaseAgentTraits):
 
 
 if __name__ == "__main__":
-    st = SaverTraits(
+    from kala.models.memory_rules import AverageMemoryRule
+
+    st: SaverTraits = SaverTraits(
         group=0,
         is_saver=True,
         min_consumption=1,
@@ -115,7 +119,12 @@ if __name__ == "__main__":
     assert st.min_specialization == 0.1
     assert st_dict["min_specialization"] == st.min_specialization
 
-    st.update(successful_round=1)
-    st.update(successful_round=2)
-    st.update(successful_round=3)  # this should push out the first value
+    rule = AverageMemoryRule()
+    st.update(successful_round=1, update_rule=rule)
+    st.update(successful_round=2, update_rule=rule)
+    st.update(successful_round=3, update_rule=rule)  # this should push out the first value
     assert list(st.memory) == [2, 3]  # type: ignore
+
+    st.update(successful_round=False, update_rule=rule)
+    st.update(successful_round=False, update_rule=rule)
+    assert not st.is_saver

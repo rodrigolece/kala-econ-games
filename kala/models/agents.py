@@ -2,6 +2,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
+from kala.models.memory_rules import AverageMemoryRule, MemoryRuleT
 from kala.models.properties import PropertiesT, SaverProperties
 
 # from .strategies import BaseStrategy
@@ -25,7 +26,10 @@ from kala.utils.misc import universally_unique_identifier
 #         super().__init__(graph)
 
 
-class BaseAgent(ABC, Generic[TraitsT, PropertiesT]):
+class BaseAgent(
+    ABC,
+    Generic[TraitsT, PropertiesT, MemoryRuleT],
+):
     """
     Base agent meant to be subclassed.
 
@@ -46,20 +50,25 @@ class BaseAgent(ABC, Generic[TraitsT, PropertiesT]):
     # strategy: TODO
     _traits: TraitsT
     _properties: PropertiesT
+    update_rule: MemoryRuleT
     uuid: int | str
 
     def __init__(
         self,
         traits: TraitsT,
         properties: PropertiesT,
+        update_rule: MemoryRuleT | None = None,
         uuid: int | str | None = None,
         rng: int | None = None,
     ) -> None:
         self._traits = traits
         self._properties = properties
-        if uuid is None:
-            uuid = universally_unique_identifier(rng=rng)
-        self.uuid = uuid
+
+        self.update_rule = (
+            AverageMemoryRule() if update_rule is None else update_rule  # type: ignore
+        )
+
+        self.uuid = universally_unique_identifier(rng=rng) if uuid is None else uuid
 
     def __hash__(self):
         return hash(self.uuid)
@@ -130,6 +139,7 @@ class InvestorAgent(BaseAgent):
         min_specialization: float = 0.0,
         income_per_period: float = 1.0,
         update_from_n_last_games: int = 0,
+        update_rule: MemoryRuleT | None = None,
         rng: int | None = None,
     ):
         """Initialise new investor agent.
@@ -160,11 +170,16 @@ class InvestorAgent(BaseAgent):
             income_per_period=income_per_period,
         )
 
-        super().__init__(traits=traits, properties=props, rng=rng)
+        super().__init__(
+            traits=traits,
+            properties=props,
+            update_rule=update_rule,
+            rng=rng,
+        )
 
     def update(self, *args, **kwargs) -> None:
         self._properties.update(*args, **kwargs)
-        self._traits.update(*args, **kwargs)
+        self._traits.update(*args, update_rule=self.update_rule, **kwargs)
 
     def reset(self) -> None:
         self._properties.reset()
