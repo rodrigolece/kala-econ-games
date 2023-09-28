@@ -29,9 +29,10 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
     -------
     match_opponents()
     play_round()
+    get_num_players()
     get_total_wealth()
     get_savers()
-    get_number_of_savers()
+    get_num_savers()
     reset_agents()
 
     """
@@ -69,6 +70,17 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
 
         self.time += 1
 
+    def get_num_players(self) -> int:
+        """
+        Return the number of players.
+
+        Returns
+        -------
+        int
+
+        """
+        return self._num_players
+
     def get_total_wealth(self, filt: Sequence[bool] | None = None) -> float:
         """
         Sum the total savings of all the players.
@@ -104,7 +116,7 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
         """
         return [player for player in self._players if player.get_trait("is_saver")]
 
-    def get_number_of_savers(self) -> int:
+    def get_num_savers(self) -> int:
         """
         Return the number of savers.
 
@@ -165,10 +177,10 @@ if __name__ == "__main__":
     )
 
     game = DiscreteTwoByTwoGame(G, coop)
-    wealth, num_savers = game.get_total_wealth(), game.get_number_of_savers()
+    wealth, num_savers = game.get_total_wealth(), game.get_num_savers()
     print(f"Init: wealth={wealth:.2f}, {num_savers=}")
 
     for _ in range(10):
         game.play_round()
-        wealth, num_savers = game.get_total_wealth(), game.get_number_of_savers()
+        wealth, num_savers = game.get_total_wealth(), game.get_num_savers()
         print(f"wealth={wealth:.2f}, {num_savers=}")
