@@ -46,6 +46,7 @@ class SaverTraits(BaseAgentTraits):
     is_saver: bool
     min_consumption: float
     min_specialization: float
+    homophily: float | None
     updates_from_n_last_games: int
     memory: deque | None
     """
@@ -54,15 +55,21 @@ class SaverTraits(BaseAgentTraits):
     is_saver: bool
     min_consumption: float
     min_specialization: float
-    updates_from_n_last_games: int
+    homophily: float | None = None
+    updates_from_n_last_games: int = 0
     memory: deque | None = None
     # TODO: we should move 'memory' to properties bcs we shouldn't really have
     # the 'update' and 'reset' methods below
 
     def __post_init__(self):
+        # First we deal with simple checks
         if not 0 <= self.min_specialization <= 1:
             raise ValueError("expected number between [0, 1] (inclusive) for 'min_specialization'")
 
+        if self.homophily is not None and (not 0 <= self.homophily <= 1):
+            raise ValueError("expected number between [0, 1] (inclusive) for 'homophily'")
+
+        # Memory related stuff
         if self.updates_from_n_last_games < 0 or not isinstance(
             self.updates_from_n_last_games, int
         ):
@@ -108,6 +115,7 @@ if __name__ == "__main__":
         min_consumption=1,
         min_specialization=0.1,
         updates_from_n_last_games=2,
+        # homophily=0.5,
     )
     st_dict = st.to_dict()
     assert st.group == 0

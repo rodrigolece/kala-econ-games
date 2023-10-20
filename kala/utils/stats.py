@@ -24,12 +24,12 @@ def choice(
     lst: Iterable[Any],
     size: int | None = None,
     replace: bool = False,
+    p: Sequence[float] | None = None,
     rng: Generator | int | None = None,
 ):
     rng = get_random_state(rng)
-    rng.choice(lst, size=size, replace=replace)
 
-    return rng.choice(lst, size=size, replace=replace)
+    return rng.choice(lst, size=size, replace=replace, p=p)
 
 
 def normal(

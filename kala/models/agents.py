@@ -138,6 +138,7 @@ class InvestorAgent(BaseAgent):
         is_saver: bool,
         min_specialization: float = 0.0,
         income_per_period: float = 1.0,
+        homophily: float | None = None,
         update_from_n_last_games: int = 0,
         update_rule: MemoryRuleT | None = None,
         rng: int | None = None,
@@ -152,6 +153,9 @@ class InvestorAgent(BaseAgent):
             The minimum specialization (default is 0.0).
         income_per_period : float
             The income per period (default is 1.0).
+        homophily : float | None
+            The homophily of the agent (default is None), if passed should be a
+            number between [0, 1].
         update_from_n_last_games : int
             The number of previous outcomes kept in memory to decide whether to
             change the saving strategy (default is 0).
@@ -162,6 +166,7 @@ class InvestorAgent(BaseAgent):
             is_saver=is_saver,
             min_consumption=0,  # not being used
             min_specialization=min_specialization,
+            homophily=homophily,
             updates_from_n_last_games=update_from_n_last_games,
         )
 

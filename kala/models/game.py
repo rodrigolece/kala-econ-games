@@ -147,7 +147,20 @@ class DiscreteTwoByTwoGame(DiscreteBaseGame):
             warn("selected player does not have any neighbours")
             return None
 
-        opponent = choice(neighs, rng=rng)
+        if (hom := player.get_trait("homophily")) is not None:
+            saver_trait = player.get_trait("is_saver")
+            ws = np.array(
+                [hom if n.get_trait("is_saver") == saver_trait else 1 - hom for n in neighs]
+            )
+            mass = ws.sum()
+            if mass == 0:
+                warn("cannot satisfy homophily constraint for selected player")
+                return None
+            ps = ws / mass
+        else:
+            ps = None
+
+        opponent = choice(neighs, rng=rng, p=ps)
         # print(f"{p.uuid} ({p.get_trait('is_saver')}) - {o.uuid} ({o.get_trait('is_saver')})")
         return player, opponent
 
@@ -164,7 +177,7 @@ if __name__ == "__main__":
     # A list of InvestorAgents
     savers = [True, False] * (num_players // 2)
     agents = [
-        InvestorAgent(is_saver=savers[i], update_from_n_last_games=1, rng=i)
+        InvestorAgent(is_saver=savers[i], homophily=None, update_from_n_last_games=1, rng=i)
         for i in range(num_players)
     ]
 
