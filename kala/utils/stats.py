@@ -1,8 +1,10 @@
 from typing import Any, Iterable, Sequence
 
 import numpy as np
+import pandas as pd
 from numpy.random import Generator
 from scipy.optimize import minimize
+from statsmodels.tsa.stattools import adfuller
 
 # from scipy.special import erf  # pylint: disable=no-name-in-module
 
@@ -157,7 +159,8 @@ def get_payoffs(*agents, differential_inefficient, differential_efficient):
 
     # eta_hat_hat
     min_min_specialization = min(
-        agents[0].get_trait("min_specialization"), agents[1].get_trait("min_specialization")
+        agents[0].get_trait("min_specialization"),
+        agents[1].get_trait("min_specialization"),
     )
     efficient_specialization = 1 - min_min_specialization + differential_efficient
 
@@ -170,6 +173,41 @@ def get_payoffs(*agents, differential_inefficient, differential_efficient):
     payoff_sn = inefficient_specialization
     payoff_ss = (1 - strategy) * (
         agents[0].get_trait("min_specialization") + efficient_specialization
-    ) + strategy * (agents[1].get_trait("min_specialization") + efficient_specialization)
+    ) + strategy * (
+        agents[1].get_trait("min_specialization") + efficient_specialization
+    )
 
     return payoff_sn, payoff_ss
+
+
+def stationary_test_adf(observations):
+    """
+    function to test stationarity using an
+    augmented Dickey-Fuller test with a 1% significance
+    """
+    stationarity = True
+
+    if observations.min() != observations.max():
+        results = adfuller(observations)
+
+        adf = results[0]
+        p_value = results[1]
+        critical_value_001 = results[4]["1%"]
+
+        if (adf < critical_value_001) and (p_value < 0.01):
+            return stationarity
+        else:
+            return not stationarity
+    else:
+        return stationarity
+
+
+def stationary_test_std(observations: pd.DataFrame, window):
+    """
+    function to test stationarity of the standard deviation using an
+    augmented Dickey-Fuller test with a 1% significance
+    """
+    rolled_std = observations.rolling(window).std().dropna()
+    stationarity = stationary_test_adf(rolled_std)
+
+    return stationarity
