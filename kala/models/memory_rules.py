@@ -2,6 +2,7 @@
 from abc import ABC, abstractmethod
 from collections import deque
 from typing import TypeVar
+import numpy as np
 
 
 class BaseMemoryRule(ABC):
@@ -25,6 +26,28 @@ class BaseMemoryRule(ABC):
 
 MemoryRuleT = TypeVar("MemoryRuleT", bound=BaseMemoryRule)
 """Used to refer to BaseMemoryRule as well as its subclasses."""
+
+
+class WeightedMemoryRule(BaseMemoryRule):
+    """
+    Memory rule that ascertains that an agent should updates its strategy if the
+    sum of the weighted games won is below the sum of the weighted games lost.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        if (weights := kwargs.get("weights", None)) is None:
+            raise ValueError("expected 'weights' keyword argument")
+        self.weights = weights
+
+        if (frac := kwargs.get("fraction", None)) is None:
+            raise ValueError("expected 'fraction' keyword argument")
+        self.fraction = frac
+
+    def should_update(self, memory: deque) -> bool:
+        n = memory.maxlen  # pylint: disable=invalid-name
+        if len(self.weights) != n:
+            raise ValueError(f"expected length of {n} for 'weights', observed {len(self.weights)}")
+        return len(memory) == n and np.average(memory, weights=self.weights) < self.fraction
 
 
 class FractionMemoryRule(BaseMemoryRule):
