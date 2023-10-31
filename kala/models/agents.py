@@ -159,6 +159,9 @@ class InvestorAgent(BaseAgent):
         update_from_n_last_games : int
             The number of previous outcomes kept in memory to decide whether to
             change the saving strategy (default is 0).
+        update_rule: MemoryRuleT | None
+            The rule used to decide whether the agent should change their saver
+             status depending on the outcome of the previous matches (default is None).
         """
 
         traits = SaverTraits(
