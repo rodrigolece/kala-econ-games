@@ -173,9 +173,7 @@ def get_payoffs(*agents, differential_inefficient, differential_efficient):
     payoff_sn = inefficient_specialization
     payoff_ss = (1 - strategy) * (
         agents[0].get_trait("min_specialization") + efficient_specialization
-    ) + strategy * (
-        agents[1].get_trait("min_specialization") + efficient_specialization
-    )
+    ) + strategy * (agents[1].get_trait("min_specialization") + efficient_specialization)
 
     return payoff_sn, payoff_ss
 

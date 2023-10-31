@@ -2,6 +2,7 @@
 from abc import ABC, abstractmethod
 from collections import deque
 from typing import TypeVar
+
 import numpy as np
 
 
