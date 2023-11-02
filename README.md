@@ -1,15 +1,15 @@
 # Kala, agent-based econ games
 
 
-This package defines a general framework to code different agent-based models (ABMs), with an emphasis on supporting a graph topology.
+This package defines a general framework to implement different agent-based models (ABMs). One of the most important things that we aim to support is a networked topology, with agents being represented as nodes that can only be matched against their neighbours. However, we also support games that do not include a network topology.
 
-We have coded some of the models and ideas as discussed in *Ernst, Ekkehard. ‘The Evolution of Time Horizons for Economic Development’, 2004. https://doi.org/10.13140/RG.2.2.34593.15204.* \[**Ernst04**\]
+To begin with, we have used the framework to coded the model presented in *Ernst, Ekkehard. ‘The Evolution of Time Horizons for Economic Development’, 2004.*  \[**Ernst04**\] [(DOI)](https://doi.org/10.13140/RG.2.2.34593.15204). We added some extensions, including support for networks.
 
 
 
 ## Installation
 
-We'll follow the best practice of installing the package inside a virtual environment. For this, we'll either use `conda` or the Python builtin `venv`.
+The package is written in Python (minimal version: 3.10). We recommend that the installation is made inside a virtual environment and to do this, one can use either `conda` (recommended in order to control the Python version) or the Python builtin `venv` (if the system's version of Python is compatible).
 
 ### Create a virtual environment using Python's builtin `venv`
 
@@ -19,7 +19,7 @@ The first step is running
 $ python -m venv kala
 ```
 
-This creates a folder that contains the virtual environment `kala` (a different name can be used). We activate it using
+This creates a folder that contains the virtual environment `kala` (a different name can be used; change below as appropriate). We activate it using
 
 
 ```bash
@@ -28,7 +28,7 @@ $ source kala/bin/activate
 
 ### Using conda (recommended)
 
-The tool `conda`, which comes bundled with Anaconda has the advantage that we can specify the version of Python that we want to use. Python 3.10 is recommended.
+The tool `conda`, which comes bundled with Anaconda has the advantage that it lets us specify the version of Python that we want to use. Python>=3.10 is required.
 
 A new environment can be created with
 
@@ -36,7 +36,7 @@ A new environment can be created with
 $ conda create -n kala python=3.10 -y
 ```
 
-Like before, the environment's name can be anything that the user wants instead of `kala`. We activate it using
+Like before, the environment's name can be anything else instead of `kala` (simply change the name below). We activate it using
 
 ```bash
 $ conda activate kala
@@ -58,16 +58,82 @@ In the future, we would like to completely package the code and publish it in [P
 
 ## User guide
 
-The user-facing interface of the package is located under `kala.models`. In all cases, we define a base class which can be extended easily to define new models. For example, one could define a new set of agent "traits" like so:
+The user-facing interface of the package is located under `kala.models` but the concrete classes have been added to the top-level package so that they can be imported directly.
+
+Before going into more detail, we'll give and comment a full example that creates a working game.
+
+We start with 3 imports
 
 ```python
-class MyNewTraits(BaseAgentTraits):
-    color: str
-    age: int
-    is_tall: bool
+import networkx as nx
+from kala import InvestorAgent, CooperationStrategy, DiscreteTwoByTwoGame, SimpleGraph
 ```
 
-When possible, we have have strived to make all such sub-classes interoperable meaning that other parts of the code tend not to assume any functionality other than the one specified in the base class (there are exceptions to this but are working on getting around them).
+We've imported [Networkx](https://networkx.org/) as a handy tool to create a pre-defined network from which we "steal" the edges, but other ways of creating graph topologies will be supported in the future.
+
+The first step is defining the agents.
+
+```python
+num_nodes = 10
+
+# A list of InvestorAgents, half of them savers and half non-savers
+is_saver = savers = [True, False] * 5
+agents = [InvestorAgent(is_saver=is_saver[i]) for i in range(num_nodes)]
+```
+
+Next, we create a network (with NetworkX) and we instantiate our own `SimpleGraph` which can take a NetworkX object as argument. We also pass the agents so that there is a one-to-one mapping between the nodes in the graph and the individual agents.
+
+```python
+g = nx.barabasi_albert_graph(num_nodes, 8, seed=0)
+G = SimpleGraph(g, nodes=agents)
+```
+
+We initialise a strategy
+
+```python
+coop = CooperationStrategy(
+    stochastic=True,  # True to draw random numbers
+    differential_efficient=0.5,  # eta_hat_hat = 1 + differential_efficient
+    differential_inefficient=0.05,  # eta_hat = 1 - differential_inefficient
+    rng=0,  # this seeds the random number generator (not needed in general)
+)
+```
+
+and then we combine the graph (which already encompasses the agents) and the strategy into a game.
+
+```python
+game = DiscreteTwoByTwoGame(G, coop)
+```
+
+All we need to do now is call a method and, if we want, keep track of different properties like so:
+
+```python
+for _ in range(10):
+    game.play_round()
+    wealth, num_savers = game.get_total_wealth(), game.get_num_savers()
+    print(f"wealth={wealth:.2f}, {num_savers=}")
+```
+
+---
+
+More complicated configurations can be added in several places. For example, we can create agents that have memory, an update rule, and some amount of homophily by calling
+
+
+```python
+from kala import FractionMemoryRule
+
+agents = [
+    InvestorAgent(
+        is_saver=is_saver[i],
+        update_from_n_last_games=5,
+        update_rule=FractionMemoryRule(fraction=0.75),
+        homophily=0.8
+    )
+    for i in range(num_nodes)
+]
+```
+
+
 
 ### Agents
 
@@ -116,8 +182,7 @@ A game is defined by the graph (which itself already contains initialised agents
 
 In order to implement the models \[**Ernst04**\], we use `DiscreteTwoByTwoGame`.
 
-
-## Contributing
+## Contributing
 
 The package has a couple of utilities (linters, formatters, etc.) that automatically run checks and help correct simple problems.
 
@@ -128,3 +193,17 @@ $ pre-commit run --all-files
 ```
 
 You might find it useful to create an alias, for example `alias pcr='pre-commit run --all-files`.
+
+
+### Extending the existing models
+
+In all cases, we define a base class which can be extended easily to define new models. For example, one could define a new set of agent "traits" like so:
+
+```python
+class MyNewTraits(BaseAgentTraits):
+    color: str
+    age: int
+    is_tall: bool
+```
+
+When possible, we have have strived to make all such sub-classes interoperable meaning that other parts of the code tend not to assume any functionality other than the one specified in the base class (there are exceptions to this but are working on getting around them).
