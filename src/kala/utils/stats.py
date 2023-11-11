@@ -6,6 +6,7 @@ from numpy.random import Generator
 from scipy.optimize import minimize
 from statsmodels.tsa.stattools import adfuller
 
+
 # from scipy.special import erf  # pylint: disable=no-name-in-module
 
 

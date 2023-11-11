@@ -1,4 +1,5 @@
 """Module defining agent strategies."""
+
 from abc import ABC, abstractmethod
 from typing import Callable, Mapping, TypeVar
 
@@ -146,26 +147,3 @@ class CooperationStrategy(BaseStrategy):
             payoffs *= [draw if ag.is_saver() else 1 for ag in agents]
 
         return tuple(payoffs)
-
-
-if __name__ == "__main__":
-    from kala.models.agents import InvestorAgent
-
-    saver = InvestorAgent(is_saver=True)
-    non_saver = InvestorAgent(is_saver=False)
-
-    strategy = CooperationStrategy(stochastic=True, rng=0, dist_sigma_func=lambda x: 1e-1)
-
-    print(strategy.calculate_payoff(saver, saver))
-    print(strategy.calculate_payoff(saver, non_saver))
-    print(strategy.calculate_payoff(non_saver, saver))
-    print(strategy.calculate_payoff(non_saver, non_saver))
-
-    # Below will be useful when we add stochastic variations back in
-    # print("\n\nSaver / saver")
-    # for _ in range(3):
-    #     pay1, pay2 = strategy.calculate_payoff(saver, saver)
-
-    # print("\nSaver / non-saver")
-    # for _ in range(3):
-    #     pay1, pay2 = pair_strategy.calculate_payoff(saver, non_saver)

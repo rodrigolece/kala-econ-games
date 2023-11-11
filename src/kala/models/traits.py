@@ -1,4 +1,5 @@
 """Module defining agent traits"""
+
 from abc import ABC
 from collections import deque
 from dataclasses import asdict, dataclass
@@ -58,8 +59,7 @@ class SaverTraits(BaseAgentTraits):
     homophily: float | None = None
     updates_from_n_last_games: int = 0
     memory: deque | None = None
-    # TODO: we should move 'memory' to properties bcs we shouldn't really have
-    # the 'update' and 'reset' methods below
+    # TODO: move 'memory' to properties bcs we shouldn't really have 'update' and 'reset' methods
 
     def __post_init__(self):
         # First we deal with simple checks
@@ -95,7 +95,7 @@ class SaverTraits(BaseAgentTraits):
         memory.append(successful_round)
 
         if update_rule.should_update(memory):
-            # TODO: for debug, get rid of print below
+            # print below is useful for debugging
             # print(f"user is flipping: {self.is_saver}->{not self.is_saver}")
             self.is_saver = not self.is_saver
             self.memory = deque([], maxlen=self.updates_from_n_last_games)
@@ -104,35 +104,3 @@ class SaverTraits(BaseAgentTraits):
         """Reset the agent memory."""
         if self.memory is not None:
             self.memory = deque([], maxlen=self.updates_from_n_last_games)
-
-
-if __name__ == "__main__":
-    from kala.models.memory_rules import AverageMemoryRule
-
-    st: SaverTraits = SaverTraits(
-        group=0,
-        is_saver=True,
-        min_consumption=1,
-        min_specialization=0.1,
-        updates_from_n_last_games=2,
-        # homophily=0.5,
-    )
-    st_dict = st.to_dict()
-    assert st.group == 0
-    assert st_dict["group"] == st.group
-    assert st.is_saver
-    assert st_dict["is_saver"] == st.is_saver
-    assert st.min_consumption == 1
-    assert st_dict["min_consumption"] == st.min_consumption
-    assert st.min_specialization == 0.1
-    assert st_dict["min_specialization"] == st.min_specialization
-
-    rule = AverageMemoryRule()
-    st.update(successful_round=1, update_rule=rule)
-    st.update(successful_round=2, update_rule=rule)
-    st.update(successful_round=3, update_rule=rule)  # this should push out the first value
-    assert list(st.memory) == [2, 3]  # type: ignore
-
-    st.update(successful_round=False, update_rule=rule)
-    st.update(successful_round=False, update_rule=rule)
-    assert not st.is_saver

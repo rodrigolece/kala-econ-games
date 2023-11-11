@@ -1,3 +1,5 @@
+"""Module defining the top-level classes of games that put everything together."""
+
 import itertools
 from abc import ABC, abstractmethod
 from typing import Generic, Sequence
@@ -163,37 +165,3 @@ class DiscreteTwoByTwoGame(DiscreteBaseGame):
         opponent = choice(neighs, rng=rng, p=ps)
         # print(f"{p.uuid} ({p.get_trait('is_saver')}) - {o.uuid} ({o.get_trait('is_saver')})")
         return player, opponent
-
-
-if __name__ == "__main__":
-    import networkx as nx
-
-    from kala.models.agents import InvestorAgent
-    from kala.models.graphs import SimpleGraph
-    from kala.models.strategies import CooperationStrategy
-
-    num_players = 10
-
-    # A list of InvestorAgents
-    savers = [True, False] * (num_players // 2)
-    agents = [
-        InvestorAgent(is_saver=savers[i], homophily=None, update_from_n_last_games=1, rng=i)
-        for i in range(num_players)
-    ]
-
-    g = nx.barabasi_albert_graph(num_players, 8, seed=0)
-    G = SimpleGraph(g, nodes=agents)
-
-    # coop = CooperationStrategy()
-    coop = CooperationStrategy(
-        stochastic=True, differential_efficient=0.5, differential_inefficient=0.05, rng=0
-    )
-
-    game = DiscreteTwoByTwoGame(G, coop)
-    wealth, num_savers = game.get_total_wealth(), game.get_num_savers()
-    print(f"Init: wealth={wealth:.2f}, {num_savers=}")
-
-    for _ in range(10):
-        game.play_round()
-        wealth, num_savers = game.get_total_wealth(), game.get_num_savers()
-        print(f"wealth={wealth:.2f}, {num_savers=}")
