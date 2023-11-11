@@ -1,4 +1,5 @@
 """Module defining agent (and possibly other types of actors) properties"""
+
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from typing import Any, TypeVar
@@ -68,14 +69,3 @@ class SaverProperties(BaseProperties):
 
     def reset(self) -> None:
         self.savings = 0.0
-
-
-if __name__ == "__main__":
-    sp = SaverProperties(savings=0, income_per_period=1)
-    # sp_dict = sp.to_dict() # this wouldn't pass 2nd assert
-    sp.update(payoff=1)
-    sp.update(payoff=1)
-    assert sp.savings == 2
-
-    sp_dict = sp.to_dict()  # NB: dict has copied values, not references
-    assert sp_dict["savings"] == sp.savings

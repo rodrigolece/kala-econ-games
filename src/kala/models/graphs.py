@@ -1,4 +1,5 @@
 """Module defining the interface for the underlying graphs."""
+
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Mapping, Sequence, TypeVar
 
@@ -45,6 +46,8 @@ GraphT = TypeVar("GraphT", bound=BaseGraph)
 
 
 class SimpleGraph(BaseGraph):
+    """Unweighted, undirected graph built using a NetworkX graph."""
+
     def __init__(self, graph: nx.Graph, nodes: Sequence[AgentT] | None = None):
         self._graph = graph
         self._nodes = []
@@ -66,24 +69,3 @@ class SimpleGraph(BaseGraph):
         pos = self._addition_order[nid]
         _neighs = self._graph.neighbors(pos)
         return [self.get_node(i, by_pos=True) for i in _neighs]
-
-
-if __name__ == "__main__":
-    from kala.models.agents import InvestorAgent
-
-    num_nodes = 10
-
-    # A list of InvestorAgents
-    agents = [InvestorAgent(is_saver=True) for _ in range(num_nodes)]
-
-    g = nx.barabasi_albert_graph(num_nodes, 8, seed=0)
-    G = SimpleGraph(g, nodes=agents)
-
-    n0 = G.get_node(agents[0].uuid)  # type: ignore
-    assert isinstance(n0, InvestorAgent)
-    neighs = G.get_neighbours(n0)
-    assert isinstance(neighs[0], InvestorAgent)
-
-    for n in agents:
-        neighs = list(G.get_neighbours(n))
-        print(f"{n.uuid}: {len(neighs)}")

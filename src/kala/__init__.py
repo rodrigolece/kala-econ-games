@@ -1,3 +1,5 @@
+"""Kala: agent-based econ games."""
+
 # pylint: disable=unused-import
 from kala.models.agents import InvestorAgent
 from kala.models.game import DiscreteTwoByTwoGame
@@ -10,3 +12,16 @@ from kala.models.memory_rules import (
     WeightedMemoryRule,
 )
 from kala.models.strategies import CooperationStrategy
+
+
+__all__ = [
+    "InvestorAgent",
+    "DiscreteTwoByTwoGame",
+    "SimpleGraph",
+    "AllPastMemoryRule",
+    "AnyPastMemoryRule",
+    "AverageMemoryRule",
+    "FractionMemoryRule",
+    "WeightedMemoryRule",
+    "CooperationStrategy",
+]

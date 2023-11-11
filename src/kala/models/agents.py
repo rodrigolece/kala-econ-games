@@ -1,4 +1,5 @@
 """Module defining different types of agents"""
+
 from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
@@ -8,6 +9,7 @@ from kala.models.properties import PropertiesT, SaverProperties
 # from .strategies import BaseStrategy
 from kala.models.traits import SaverTraits, TraitsT
 from kala.utils.misc import universally_unique_identifier
+
 
 # class NeighbourhoodMixin:
 #     def __init__(self, graph: GraphT, node: int | str, *args, **kwargs):
@@ -200,28 +202,3 @@ class InvestorAgent(BaseAgent):
     def is_saver(self) -> bool:
         """Handy direct access to trait is_saver."""
         return self.get_trait("is_saver")
-
-
-if __name__ == "__main__":
-    import numpy as np
-
-    agent = InvestorAgent(is_saver=True)
-    assert agent.is_saver()
-    print(f"Hello from agent {agent.uuid}!")
-
-    agent.update(payoff=2)
-    assert agent.get_savings() == 2
-    agent.update(payoff=0.5)
-    assert agent.get_savings() == 2.5
-
-    n_games = 5
-    agent_w_memory = InvestorAgent(is_saver=False, update_from_n_last_games=n_games)
-    print(f"Hello from agent {agent_w_memory.uuid} with {n_games} games of memory!")
-
-    a = np.array([False] * (n_games - 1) + [True])
-    expected_states = np.hstack((a, ~a))
-
-    for i in range(2 * n_games):
-        agent_w_memory.update(payoff=1.0, successful_round=False)
-        # print("\tis saver:", agent_w_memory.is_saver())
-        assert agent_w_memory.is_saver() == expected_states[i]
