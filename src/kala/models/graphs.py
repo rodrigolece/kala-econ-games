@@ -45,6 +45,8 @@ GraphT = TypeVar("GraphT", bound=BaseGraph)
 
 
 class SimpleGraph(BaseGraph):
+    """Unweighted, undirected graph built using a NetworkX graph."""
+
     def __init__(self, graph: nx.Graph, nodes: Sequence[AgentT] | None = None):
         self._graph = graph
         self._nodes = []

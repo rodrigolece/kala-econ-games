@@ -1,23 +1,31 @@
 
 [project]
 name = "kala"
-version = "0.0.1"
+version = "0.1.0"
 authors = [
-  { name="Rodrigo L.C.", email="rodrigolealc@ciencias.unam.mx" },
-  { name="Leonardo C.G.", email="lmcastrogonzalez@turing.ac.uk"}
+    { name = "Rodrigo L.C.", email = "rodrigolealc@ciencias.unam.mx" },
+    { name = "Leonardo C.G.", email = "lmcastrogonzalez@turing.ac.uk" },
 ]
 description = "Kala: agent-based econ games"
 readme = "README.md"
 requires-python = ">=3.10"
-license =  {file = "LICENSE"}
+license = { text = "MIT" }
 # classifiers = [
 # ]
 # dynamic = ["version"]
+dependencies = [
+    "networkx",
+    "numpy",
+    "pendulum",
+    "scipy",
+    "statsmodels",
+    "mkdocs>=1.5.3",
+]
 
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
 
 [tool.black]
@@ -27,6 +35,7 @@ target-version = ['py310']
 
 [tool.isort]
 profile = "black"
+lines_after_imports = 2
 
 
 [tool.pylint]
@@ -35,3 +44,18 @@ max-line-length = 100
 
 [tool.mypy]
 ignore_missing_imports = true
+
+
+[tool.pdm.dev-dependencies]
+dev = [
+    "build>=1.0.3",
+    "flake8>=6.1.0",
+    "isort>=5.12.0",
+    "pre-commit>=3.5.0",
+    "pylint>=3.0.2",
+    "pytest>=7.4.3",
+    "mypy>=1.7.0",
+    "ipython>=8.17.2",
+    "pyroma>=4.2",
+    "pydocstyle>=6.3.0",
+]
