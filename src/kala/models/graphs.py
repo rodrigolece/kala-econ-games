@@ -22,10 +22,10 @@ class BaseGraph(ABC, Generic[AgentT]):
 
     _graph: Any
     _nodes: Sequence[AgentT]
-    _addition_order: Mapping[int | str, int]
+    _addition_order: Mapping[str, int]
 
     @abstractmethod
-    def get_node(self, nid: int | str, by_pos: bool = False) -> AgentT:
+    def get_node(self, nid: int | str) -> AgentT:
         """Get the node object given its id."""
 
     @abstractmethod
@@ -46,26 +46,37 @@ GraphT = TypeVar("GraphT", bound=BaseGraph)
 
 
 class SimpleGraph(BaseGraph):
-    """Unweighted, undirected graph built using a NetworkX graph."""
+    """Unweighted, undirected graph built on top of NetworkX."""
 
-    def __init__(self, graph: nx.Graph, nodes: Sequence[AgentT] | None = None):
+    _nodes: Sequence[AgentT | None]
+
+    def __init__(self, graph: nx.Graph, nodes: Sequence[AgentT]):
         self._graph = graph
         self._nodes = []
         self._addition_order = {}
 
-        if nodes:
-            for i, node in enumerate(nodes):
-                self._nodes.append(node)
-                nid = getattr(node, "uuid", i)
-                self._addition_order[nid] = i
+        # NB: nodes is relied upon and cannot be None in this implementation
+        for i, n in enumerate(nodes):
+            self._nodes.append(n)
+            nid = getattr(n, "uuid", i)
+            self._addition_order[nid] = i
 
-    # pylint: disable=unused-argument
-    def get_node(self, nid: int | str, by_pos: bool = False, dummy: AgentT | None = None) -> AgentT:
-        pos: int = nid if by_pos else self._addition_order[nid]  # type: ignore
+    def _get_pos_from_node(self, node: AgentT | int | str) -> int:
+        if hasattr(node, "uuid"):
+            node = self._addition_order[getattr(node, "uuid")]
+        elif isinstance(node, str):
+            node = self._addition_order[node]
+        elif isinstance(node, int):
+            pass
+        else:
+            raise TypeError(f"Invalid type for node: {type(node)}")
+        return node
+
+    def get_node(self, nid: int | str) -> AgentT:
+        pos: int = self._get_pos_from_node(nid)  # type: ignore
         return self._nodes[pos]
 
     def get_neighbours(self, node: AgentT | int | str) -> Sequence[AgentT]:
-        nid = getattr(node, "uuid") if hasattr(node, "uuid") else node
-        pos = self._addition_order[nid]
+        pos = self._get_pos_from_node(node)
         _neighs = self._graph.neighbors(pos)
-        return [self.get_node(i, by_pos=True) for i in _neighs]
+        return [self.get_node(i) for i in _neighs]

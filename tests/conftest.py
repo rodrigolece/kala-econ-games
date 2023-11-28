@@ -20,7 +20,7 @@ def init_agents():
     return agents
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def init_simple_graph(init_agents):
     """Return a simple graph."""
     g = nx.Graph()
