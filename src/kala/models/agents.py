@@ -143,6 +143,7 @@ class InvestorAgent(BaseAgent):
         homophily: float | None = None,
         update_from_n_last_games: int = 0,
         update_rule: MemoryRuleT | None = None,
+        uuid: int | str | None = None,
         rng: int | None = None,
     ):
         """Initialise new investor agent.
@@ -164,6 +165,11 @@ class InvestorAgent(BaseAgent):
         update_rule: MemoryRuleT | None
             The rule used to decide whether the agent should change their saver
              status depending on the outcome of the previous matches (default is None).
+        uuid : int | str | None
+            The unique identifier of the agent (default is None and a random string
+            is generated).
+        rng : int | None
+            The seed used to initialise random generators (default is None).
         """
 
         traits = SaverTraits(
@@ -184,6 +190,7 @@ class InvestorAgent(BaseAgent):
             traits=traits,
             properties=props,
             update_rule=update_rule,
+            uuid=uuid,
             rng=rng,
         )
 
