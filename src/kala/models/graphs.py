@@ -2,10 +2,13 @@
 
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Sequence, TypeVar
+from warnings import warn
 
 import networkx as nx
+from numpy.random import Generator
 
 from kala.models.agents import AgentT
+from kala.utils.stats import choice
 
 
 class BaseGraph(ABC, Generic[AgentT]):
@@ -22,6 +25,8 @@ class BaseGraph(ABC, Generic[AgentT]):
     remove_node()
     add_edge()
     remove_edge()
+    select_random_node()
+    select_random_neighbour()
 
     """
 
@@ -45,9 +50,9 @@ class BaseGraph(ABC, Generic[AgentT]):
     def get_neighbours(self, node: AgentT | int | str) -> Sequence[AgentT]:
         """Get the neighbourhood of a given node."""
 
-    def get_neighbors(self, node: AgentT | int | str) -> Sequence[AgentT]:
-        """Alias of the method get_neighbours."""
-        return self.get_neighbours(node)
+    def get_neighbors(self, *args, **kwargs) -> Sequence[AgentT]:
+        """Alias for the method get_neighbours."""
+        return self.get_neighbours(*args, **kwargs)
 
     @abstractmethod
     def add_node(self, node: AgentT) -> bool:
@@ -64,6 +69,62 @@ class BaseGraph(ABC, Generic[AgentT]):
     @abstractmethod
     def remove_edge(self, u: AgentT | int | str, v: AgentT | int | str) -> bool:
         """Remove the edge between nodes u and v."""
+
+    def select_random_node(self, rng: Generator | int | None = None) -> AgentT:
+        """Select a random node in the graph."""
+        return choice(self.get_nodes(), rng=rng)
+
+    def select_random_neighbour(
+        self,
+        node: AgentT | int | str,
+        rng: Generator | int | None = None,
+    ) -> AgentT | None:
+        """
+        Select a random neighbour of a node in the graph.
+
+        If the nodes have homophily then the neighbours are chosen with probability
+        proportional to their homophily.
+
+        Parameters
+        ----------
+        node : AgentT | int | str
+            The node for which to select a neighbour.
+        rng : Generator | int | None, optional
+            The random number generator to use, by default None.
+
+        Returns
+        -------
+        AgentT | None
+            If the node is disconnected or the homophily constraints cannot be satisfied,
+            then None is returned.
+
+        """
+        if isinstance(node, int | str):
+            node = self.get_node(node)
+
+        neighs = self.get_neighbours(node)
+
+        if len(neighs) == 0:
+            warn("selected player does not have any neighbours")
+            return None
+
+        if (hom := node.get_trait("homophily")) is not None:
+            saver_trait = node.get_trait("is_saver")
+            ps = [hom if n.get_trait("is_saver") == saver_trait else 1 - hom for n in neighs]
+            # the function choice takes care of the normalisation
+        else:
+            ps = None
+
+        try:
+            return choice(neighs, p=ps, rng=rng)
+
+        except ValueError:
+            warn("cannot satisfy homophily constraint for selected player")
+            return None
+
+    def select_random_neighbor(self, *args, **kwargs) -> AgentT | None:
+        """Alias for the method select_random_neighbour."""
+        return self.select_random_neighbour(*args, **kwargs)
 
 
 GraphT = TypeVar("GraphT", bound=BaseGraph)

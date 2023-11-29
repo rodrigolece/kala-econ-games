@@ -1,4 +1,4 @@
-from typing import Any, Iterable, Sequence
+from typing import Any, Sequence
 
 import numpy as np
 import pandas as pd
@@ -24,7 +24,7 @@ def get_random_state(rng: Generator | int | None = None):
 
 
 def choice(
-    lst: Iterable[Any],
+    lst: Sequence[Any],
     size: int | None = None,
     replace: bool = False,
     p: Sequence[float] | None = None,
@@ -32,7 +32,23 @@ def choice(
 ):
     rng = get_random_state(rng)
 
-    return rng.choice(lst, size=size, replace=replace, p=p)
+    if p is not None:
+        p_arr: np.ndarray = np.asarray(p)
+        mass = p_arr.sum()
+
+        if len(p_arr) != len(lst):
+            raise ValueError("probabilities must be the same length as the input list")
+        if np.any(p_arr < 0.0):
+            raise ValueError("probabilities must be non-negative")
+        if np.isclose(mass, 0.0):
+            raise ValueError("probabilities sum to zero")
+
+        if not np.isclose(mass, 1.0):
+            p_arr /= mass
+    else:
+        p_arr = None
+
+    return rng.choice(lst, size=size, replace=replace, p=p_arr)
 
 
 def normal(

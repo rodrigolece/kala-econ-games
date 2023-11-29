@@ -3,7 +3,6 @@
 import itertools
 from abc import ABC, abstractmethod
 from typing import Generic, Sequence, TypeVar
-from warnings import warn
 
 import numpy as np
 from numpy.random import Generator
@@ -11,7 +10,6 @@ from numpy.random import Generator
 from kala.models.agents import AgentT
 from kala.models.graphs import GraphT
 from kala.models.strategies import StrategyT
-from kala.utils.stats import choice
 
 
 class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
@@ -150,27 +148,10 @@ class DiscreteTwoByTwoGame(DiscreteBaseGame):
     """
 
     def match_opponents(self, rng: Generator | int | None = None, **kwargs) -> tuple | None:
-        player = choice(self._get_players(), rng=rng)
-        # TODO: move to graph
-
-        neighs = self.graph.get_neighbours(player)
-        if len(neighs) == 0:
-            warn("selected player does not have any neighbours")
+        player = self.graph.select_random_node(rng=rng)
+        opponent = self.graph.select_random_neighbour(player, rng=rng)
+        if opponent is None:
             return None
 
-        if (hom := player.get_trait("homophily")) is not None:
-            saver_trait = player.get_trait("is_saver")
-            ws = np.array(
-                [hom if n.get_trait("is_saver") == saver_trait else 1 - hom for n in neighs]
-            )
-            mass = ws.sum()
-            if mass == 0:
-                warn("cannot satisfy homophily constraint for selected player")
-                return None
-            ps = ws / mass
-        else:
-            ps = None
-
-        opponent = choice(neighs, rng=rng, p=ps)
         # print(f"{p.uuid} ({p.get_trait('is_saver')}) - {o.uuid} ({o.get_trait('is_saver')})")
         return player, opponent
