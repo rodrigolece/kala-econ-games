@@ -2,7 +2,7 @@
 
 import itertools
 from abc import ABC, abstractmethod
-from typing import Generic, Sequence
+from typing import Generic, Sequence, TypeVar
 from warnings import warn
 
 import numpy as np
@@ -42,15 +42,26 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
     time: int
     graph: GraphT
     strategy: StrategyT
-    _players: Sequence[AgentT]
-    _num_players: int
 
     def __init__(self, graph: GraphT, strategy: StrategyT):
         self.time = 0
         self.graph = graph
         self.strategy = strategy
-        self._players = graph._nodes
-        self._num_players = graph.num_nodes()
+
+    def _get_players(self):
+        # NB: networkx; implementation makes it necessary to call this method to filter out None's
+        return self.graph.get_nodes()
+
+    def get_num_players(self) -> int:
+        """
+        Return the number of players.
+
+        Returns
+        -------
+        int
+
+        """
+        return self.graph.num_nodes()
 
     @abstractmethod
     def match_opponents(self, rng: Generator | int | None = None, **kwargs) -> tuple | None:
@@ -62,7 +73,7 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
         if (rng := kwargs.get("rng", None)) is not None:
             kwargs["rng"] = np.random.default_rng(rng)
 
-        for _ in range(self._num_players // 2):
+        for _ in range(self.get_num_players() // 2):
             if (players := self.match_opponents(**kwargs)) is not None:
                 payoffs = self.strategy.calculate_payoff(*players, **kwargs)
                 achieved_max_payoff = np.array(payoffs) == max(payoffs)
@@ -71,17 +82,6 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
                     agent.update(payoff=pay, successful_round=success)
 
         self.time += 1
-
-    def get_num_players(self) -> int:
-        """
-        Return the number of players.
-
-        Returns
-        -------
-        int
-
-        """
-        return self._num_players
 
     def get_total_wealth(self, filt: Sequence[bool] | None = None) -> float:
         """
@@ -99,24 +99,28 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
         """
         out = 0.0
         if filt is not None:
-            assert len(filt) == self._num_players, "'filt' must be the same length as players"
-        players = itertools.compress(self._players, filt) if filt is not None else self._players
+            assert len(filt) == self.get_num_players(), "'filt' must be the same length as players"
+        players = (
+            itertools.compress(self._get_players(), filt)
+            if filt is not None
+            else self._get_players()
+        )
 
         for player in players:
             out += player.get_property("savings")
 
         return out
 
-    def get_savers(self) -> Sequence[AgentT]:
+    def get_savers(self) -> list[AgentT]:
         """
         Return a list of savers.
 
         Returns
         -------
-        Sequence[AgentT]
+        list[AgentT]
 
         """
-        return [player for player in self._players if player.get_trait("is_saver")]
+        return [player for player in self._get_players() if player.get_trait("is_saver")]
 
     def get_num_savers(self) -> int:
         """
@@ -131,8 +135,12 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
 
     def reset_agents(self) -> None:
         """Reset the savings of agents to their initial state."""
-        for player in self._players:
+        for player in self._get_players():
             player.reset()
+
+
+DiscreteGameT = TypeVar("DiscreteGameT", bound=DiscreteBaseGame)
+"""Used to refer to DiscreteBaseGame as well as its subclasses."""
 
 
 class DiscreteTwoByTwoGame(DiscreteBaseGame):
@@ -142,7 +150,8 @@ class DiscreteTwoByTwoGame(DiscreteBaseGame):
     """
 
     def match_opponents(self, rng: Generator | int | None = None, **kwargs) -> tuple | None:
-        player = choice(self._players, rng=rng)
+        player = choice(self._get_players(), rng=rng)
+        # TODO: move to graph
 
         neighs = self.graph.get_neighbours(player)
         if len(neighs) == 0:

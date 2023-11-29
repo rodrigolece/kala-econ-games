@@ -15,8 +15,9 @@ class BaseGraph(ABC, Generic[AgentT]):
     Methods
     -------
     get_node()
-    get_neighbours()
+    get_nodes()
     num_nodes()
+    get_neighbours()
     add_node()
     remove_node()
     add_edge()
@@ -32,6 +33,14 @@ class BaseGraph(ABC, Generic[AgentT]):
     def get_node(self, nid: int | str) -> AgentT:
         """Get the node object given its id."""
 
+    def get_nodes(self):
+        """Get all the nodes in the graph."""
+        return self._nodes
+
+    def num_nodes(self) -> int:
+        """Return the number of nodes in the graph."""
+        return len(self._nodes)
+
     @abstractmethod
     def get_neighbours(self, node: AgentT | int | str) -> Sequence[AgentT]:
         """Get the neighbourhood of a given node."""
@@ -39,10 +48,6 @@ class BaseGraph(ABC, Generic[AgentT]):
     def get_neighbors(self, node: AgentT | int | str) -> Sequence[AgentT]:
         """Alias of the method get_neighbours."""
         return self.get_neighbours(node)
-
-    def num_nodes(self) -> int:
-        """Return the number of nodes in the graph."""
-        return len(self._nodes)
 
     @abstractmethod
     def add_node(self, node: AgentT) -> bool:
@@ -92,17 +97,20 @@ class SimpleGraph(BaseGraph, Generic[AgentT]):
             raise TypeError(f"Invalid type for node: {type(node)}")
         return node
 
-    def num_nodes(self) -> int:
-        # NB: this is specific to NetworkX because we allow None so as to not invalidate
-        # the self._addition_order
-        return len(list(filter(None, self._nodes)))
-
     def get_node(self, nid: int | str) -> AgentT | None:
         # FIXME: return could be node if the node is removed
         pos = self._get_pos_from_node(nid)  # type: ignore
         return self._nodes[pos]
 
-    def get_neighbours(self, node: AgentT | int | str) -> Sequence[AgentT]:
+    def get_nodes(self):
+        return list(filter(None, self._nodes))
+
+    def num_nodes(self) -> int:
+        # NB: this is specific to NetworkX because we allow None so as to not invalidate
+        # the self._addition_order
+        return len(list(filter(None, self._nodes)))
+
+    def get_neighbours(self, node: AgentT | int | str) -> list[AgentT]:
         pos = self._get_pos_from_node(node)
         _neighs = self._graph.neighbors(pos)
         return list(filter(None, (self.get_node(i) for i in _neighs)))
