@@ -8,7 +8,7 @@ from kala.models.game import DiscreteTwoByTwoGame
 from kala.models.strategies import CooperationStrategy
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")  # needs to match scope of init_simple_graph
 def init_game(init_simple_graph):
     """Initialize a game."""
     coop = CooperationStrategy(
