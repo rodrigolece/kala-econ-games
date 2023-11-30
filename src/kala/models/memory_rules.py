@@ -44,6 +44,8 @@ class WeightedMemoryRule(BaseMemoryRule):
             raise ValueError("expected 'fraction' keyword argument")
         self.fraction = frac
 
+        self.name = "Weighted Memory Rule"
+
     def should_update(self, memory: deque) -> bool:
         n = memory.maxlen  # pylint: disable=invalid-name
         if len(self.weights) != n:
@@ -61,6 +63,7 @@ class FractionMemoryRule(BaseMemoryRule):
         if (frac := kwargs.get("fraction", None)) is None:
             raise ValueError("expected 'fraction' keyword argument")
         self.fraction = frac
+        self.name = f"Fraction Memory {frac} Rule"
 
     def should_update(self, memory: deque) -> bool:
         n = memory.maxlen  # pylint: disable=invalid-name
@@ -75,6 +78,7 @@ class AverageMemoryRule(BaseMemoryRule):
 
     def __init__(self, *args, **kwargs) -> None:
         self.fraction = 0.5
+        self.name = "Average Memory Rule"
 
     def should_update(self, memory: deque) -> bool:
         n = memory.maxlen  # pylint: disable=invalid-name
@@ -86,6 +90,9 @@ class AllPastMemoryRule(BaseMemoryRule):
     Memory rule that ascertains that an agent should updates its strategy if all
     of the games in memory were lost."""
 
+    def __init__(self, *args, **kwargs) -> None:
+        self.name = "All Past Memory Rule"
+
     def should_update(self, memory: deque) -> bool:
         n = memory.maxlen  # pylint: disable=invalid-name
         return len(memory) == n and sum(memory) == n
@@ -95,6 +102,9 @@ class AnyPastMemoryRule(BaseMemoryRule):
     """
     Memory rule that ascertains that an agent should updates its strategy if any
     of the games in memory were lost."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        self.name = "Any Past Memory"
 
     def should_update(self, memory: deque) -> bool:
         n = memory.maxlen  # pylint: disable=invalid-name

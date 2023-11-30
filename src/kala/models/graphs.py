@@ -5,6 +5,7 @@ from typing import Any, Generic, Sequence, TypeVar
 from warnings import warn
 
 import networkx as nx
+import numpy as np
 from numpy.random import Generator
 
 from kala.models.agents import AgentT
@@ -157,7 +158,7 @@ class SimpleGraph(BaseGraph, Generic[AgentT]):
             node = self._addition_order[getattr(node, "uuid")]
         elif isinstance(node, str):
             node = self._addition_order[node]
-        elif isinstance(node, int):
+        elif isinstance(node, int | np.integer):
             pass
         else:
             raise TypeError(f"Invalid type for node: {type(node)}")
