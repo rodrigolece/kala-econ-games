@@ -11,6 +11,14 @@ from kala.models.memory_rules import (
     FractionMemoryRule,
     WeightedMemoryRule,
 )
+from kala.models.shocks import (
+    RemoveEdge,
+    RemovePlayer,
+    RemoveRandomEdge,
+    RemoveRandomPlayer,
+    SwapEdge,
+    SwapRandomEdge,
+)
 from kala.models.strategies import CooperationStrategy
 
 
@@ -24,4 +32,10 @@ __all__ = [
     "FractionMemoryRule",
     "WeightedMemoryRule",
     "CooperationStrategy",
+    "RemovePlayer",
+    "RemoveRandomPlayer",
+    "RemoveEdge",
+    "RemoveRandomEdge",
+    "SwapEdge",
+    "SwapRandomEdge",
 ]
