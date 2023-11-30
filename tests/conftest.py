@@ -6,7 +6,9 @@ import networkx as nx
 import pytest
 
 from kala.models.agents import InvestorAgent
+from kala.models.game import DiscreteTwoByTwoGame
 from kala.models.graphs import SimpleGraph
+from kala.models.strategies import CooperationStrategy
 
 
 @pytest.fixture(scope="module")
@@ -26,3 +28,15 @@ def init_simple_graph(init_agents):
     g = nx.Graph()
     g.add_edges_from([(0, 1), (0, 2), (1, 2), (2, 3), (3, 4), (3, 5), (4, 5)])
     return SimpleGraph(g, nodes=init_agents)
+
+
+@pytest.fixture(scope="module")
+def init_deterministic_cooperation_strategy():
+    """Return a cooperation strategy."""
+    return CooperationStrategy(stochastic=False)
+
+
+@pytest.fixture(scope="function")
+def init_deterministic_game(init_simple_graph, init_deterministic_cooperation_strategy):
+    """Return a game."""
+    return DiscreteTwoByTwoGame(init_simple_graph, init_deterministic_cooperation_strategy)

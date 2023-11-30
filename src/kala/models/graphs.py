@@ -20,6 +20,7 @@ class BaseGraph(ABC, Generic[AgentT]):
     get_node()
     get_nodes()
     num_nodes()
+    num_edges()
     get_neighbours()
     add_node()
     remove_node()
@@ -45,6 +46,10 @@ class BaseGraph(ABC, Generic[AgentT]):
     def num_nodes(self) -> int:
         """Return the number of nodes in the graph."""
         return len(self._nodes)
+
+    @abstractmethod
+    def num_edges(self) -> int:
+        """Return the number of edges in the graph."""
 
     @abstractmethod
     def get_neighbours(self, node: AgentT | int | str) -> Sequence[AgentT]:
@@ -159,7 +164,6 @@ class SimpleGraph(BaseGraph, Generic[AgentT]):
         return node
 
     def get_node(self, nid: int | str) -> AgentT | None:
-        # FIXME: return could be node if the node is removed
         pos = self._get_pos_from_node(nid)  # type: ignore
         return self._nodes[pos]
 
@@ -170,6 +174,9 @@ class SimpleGraph(BaseGraph, Generic[AgentT]):
         # NB: this is specific to NetworkX because we allow None so as to not invalidate
         # the self._addition_order
         return len(list(filter(None, self._nodes)))
+
+    def num_edges(self) -> int:
+        return nx.number_of_edges(self._graph)
 
     def get_neighbours(self, node: AgentT | int | str) -> list[AgentT]:
         pos = self._get_pos_from_node(node)

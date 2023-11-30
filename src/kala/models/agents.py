@@ -75,6 +75,9 @@ class BaseAgent(
     def __hash__(self):
         return hash(self.uuid)
 
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}({self.uuid})"
+
     # pylint: disable=protected-access
     def get_property(self, property_name: str) -> Any:
         """
