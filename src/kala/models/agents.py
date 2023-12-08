@@ -141,6 +141,7 @@ class InvestorAgent(BaseAgent):
     def __init__(
         self,
         is_saver: bool,
+        group: int | None = None,
         min_specialization: float = 0.0,
         income_per_period: float = 1.0,
         homophily: float | None = None,
@@ -155,6 +156,8 @@ class InvestorAgent(BaseAgent):
         ----------
         is_saver : bool
             Boolean indicating whether the agent is a saver or not.
+        group : int
+            Optional group (handy to keep track for example of SBM clusters).
         min_specialization : float
             The minimum specialization (default is 0.0).
         income_per_period : float
@@ -176,8 +179,8 @@ class InvestorAgent(BaseAgent):
         """
 
         traits = SaverTraits(
-            group=0,  # not being used
             is_saver=is_saver,
+            group=group,
             min_consumption=0,  # not being used
             min_specialization=min_specialization,
             homophily=homophily,

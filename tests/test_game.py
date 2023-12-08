@@ -18,8 +18,15 @@ def init_game(init_simple_graph):
     return DiscreteTwoByTwoGame(init_simple_graph, coop)
 
 
+def test_filter_functions(init_game):
+    """Test filter functions."""
+    game = init_game
+    assert game.get_num_savers() == 3
+    assert game.create_filter_from_trait("group", 0) == [True] * 3 + [False] * 3
+
+
 def test_init(init_game):
-    """TODO: this is currently not a real test."""
+    """NB: this is currently not a real test but it's here to make sure the functions run."""
     game = init_game
     wealth, num_savers = game.get_total_wealth(), game.get_num_savers()
     logging.info(f"Init: wealth={wealth:.2f}, {num_savers=}")
