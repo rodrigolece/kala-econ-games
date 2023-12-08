@@ -117,3 +117,41 @@ class SwapRandomEdge(BaseShock):
             print(f"swapping edge: ({pivot_u}, {v}) -> ({pivot_u}, {w})")
             game.graph.remove_edge(pivot_u, v)
             game.graph.add_edge(pivot_u, w)
+
+
+class AddEdge(BaseShock):
+    """Add an edge in the game."""
+
+    def __init__(self, u: AgentT | int | str, v: AgentT | int | str):
+        self.u = u
+        self.v = v
+
+    def apply(self, game: DiscreteGameT):
+        print(f"Adding edge: ({self.u}, {self.v})")
+
+        game.graph.add_edge(self.u, self.v)
+
+
+class AddRandomEdge(BaseShock):
+    """Add an edge selected at random from the game."""
+
+    def __init__(self, max_attempts: int = 10, rng: Generator | int | None = None):
+        self.max_attempts = max_attempts
+        self.rng = np.random.default_rng(rng)
+
+    def apply(self, game: DiscreteGameT):
+        u = game.graph.select_random_node(rng=self.rng)
+        neighs = game.graph.get_neighbours(u)
+
+        v = u
+        attempts = 0
+        while v == u or v in neighs:
+            if attempts == self.max_attempts:
+                v = None  # don't take any action
+                break
+            v = game.graph.select_random_node(rng=self.rng)
+            attempts += 1
+
+        if v is not None:
+            print(f"adding edge: ({u}, {v})")
+            game.graph.add_edge(u, v)
