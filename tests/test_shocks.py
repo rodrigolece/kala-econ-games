@@ -1,6 +1,8 @@
 """Test the shocks module."""
 
 from kala.models.shocks import (
+    AddEdge,
+    AddRandomEdge,
     RemoveEdge,
     RemovePlayer,
     RemoveRandomEdge,
@@ -71,3 +73,25 @@ def test_swap_random_edge(init_deterministic_game):
 
     assert game.graph.num_nodes() == 6
     assert game.graph.num_edges() == 7
+
+
+def test_add_edge(init_deterministic_game):
+    """Test the AddEdge shock."""
+    game = init_deterministic_game
+
+    AddEdge("a", "f").apply(game)
+
+    assert game.graph.num_nodes() == 6
+    assert game.graph.num_edges() == 8
+    assert game.graph.get_node("f") in game.graph.get_neighbours("a")
+
+
+def test_add_random_edge(init_deterministic_game):
+    """Test the AddRandomEdge shock."""
+
+    game = init_deterministic_game
+
+    AddRandomEdge().apply(game)
+
+    assert game.graph.num_nodes() == 6
+    assert game.graph.num_edges() == 8
