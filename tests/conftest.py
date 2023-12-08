@@ -15,9 +15,10 @@ from kala.models.strategies import CooperationStrategy
 def init_agents():
     """Return a list of agents."""
     is_saver = [True] * 3 + [False] * 3
+    groups = [0] * 3 + [1] * 3
     agents = [
-        InvestorAgent(is_saver=s, uuid=letter)
-        for s, letter in zip(is_saver, string.ascii_lowercase)
+        InvestorAgent(is_saver=s, group=g, uuid=letter)
+        for s, g, letter in zip(is_saver, groups, string.ascii_lowercase)
     ]
     return agents
 

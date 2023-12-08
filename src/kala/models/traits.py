@@ -43,8 +43,8 @@ class SaverTraits(BaseAgentTraits):
 
     Attributes
     ----------
-    group: int
     is_saver: bool
+    group: int | None
     min_consumption: float
     min_specialization: float
     homophily: float | None
@@ -52,8 +52,8 @@ class SaverTraits(BaseAgentTraits):
     memory: deque | None
     """
 
-    group: int
     is_saver: bool
+    group: int | None
     min_consumption: float
     min_specialization: float
     homophily: float | None = None

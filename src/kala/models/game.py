@@ -2,7 +2,7 @@
 
 import itertools
 from abc import ABC, abstractmethod
-from typing import Generic, Sequence, TypeVar
+from typing import Any, Generic, Sequence, TypeVar
 
 import numpy as np
 from numpy.random import Generator
@@ -31,7 +31,7 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
     play_round()
     get_num_players()
     get_total_wealth()
-    get_savers()
+    create_filter_from_trait()
     get_num_savers()
     reset_agents()
 
@@ -109,16 +109,24 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
 
         return out
 
-    def get_savers(self) -> list[AgentT]:
+    def create_filter_from_trait(self, trait_name: str, trait_value: Any = True) -> list[bool]:
         """
-        Return a list of savers.
+        Create a filter from a trait name and value.
+
+        Parameters
+        ----------
+        trait_name : str
+            The name of the trait.
+        trait_value : Any, optional
+            The value of the trait, by default True ('is_saver', which would be the primary use
+            case, is a boolean).
 
         Returns
         -------
-        list[AgentT]
+        list[bool]
 
         """
-        return [player for player in self._get_players() if player.get_trait("is_saver")]
+        return [player.get_trait(trait_name) == trait_value for player in self._get_players()]
 
     def get_num_savers(self) -> int:
         """
@@ -129,7 +137,7 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
         int
 
         """
-        return len(self.get_savers())
+        return sum(self.create_filter_from_trait("is_saver"))
 
     def reset_agents(self) -> None:
         """Reset the savings of agents to their initial state."""
