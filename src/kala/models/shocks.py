@@ -192,6 +192,14 @@ class FlipSavers(BaseShock):
             node.flip_saver_trait()
 
 
+class FlipAllSavers(BaseShock):
+    """Flip all savers in a game"""
+
+    def apply(self, game: DiscreteGameT):
+        for node in game.graph.get_nodes():
+            node.flip_saver_traint()
+
+
 class HomogenizeSaversTo(BaseShock):
     """Shock to homogenize savers to a given target trait"""
 

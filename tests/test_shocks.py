@@ -9,6 +9,11 @@ from kala.models.shocks import (
     RemoveRandomPlayer,
     SwapEdge,
     SwapRandomEdge,
+    FlipRandomSaver,
+    FlipSaver,
+    FlipSavers,
+    HomogenizeSaversTo,
+    FlipAllSavers,
 )
 
 
@@ -95,3 +100,71 @@ def test_add_random_edge(init_deterministic_game):
 
     assert game.graph.num_nodes() == 6
     assert game.graph.num_edges() == 8
+
+
+def test_flip_random_saver(init_deterministic_game):
+    """Test the FlipRandomSaver shock."""
+
+    game = init_deterministic_game
+    initial_number_of_savers = game.get_num_savers()
+
+    FlipRandomSaver(rng=0).apply(game)
+
+    assert game.get_num_savers() != initial_number_of_savers
+
+
+def test_flip_saver(init_deterministic_game):
+    """Test the FlipSaver shock."""
+
+    game = init_deterministic_game
+
+    initial_number_of_savers = game.get_num_savers()
+
+    FlipSaver("a").apply(game)
+
+    assert game.get_num_savers() != initial_number_of_savers
+
+
+def test_flip_all_savers(init_deterministic_game):
+    """Test the FlipAllSavers shock."""
+
+    game = init_deterministic_game
+
+    players = game.get_num_players()
+    initial_number_of_savers = game.get_num_savers()
+    initial_number_of_non_savers = players - initial_number_of_savers
+
+    FlipAllSavers().apply(game)
+
+    new_number_of_savers = game.get_num_savers()
+    new_number_number_of_non_savers = players - new_number_of_savers
+
+    assert new_number_of_savers == initial_number_of_non_savers
+    assert new_number_number_of_non_savers == initial_number_of_savers
+
+
+def test_flip_savers(init_deterministic_game):
+    """Test the FlipSavers shock."""
+
+    game = init_deterministic_game
+    list_players = ["a", "f"]
+
+    is_saver_a = game.graph.get_node("a").is_saver
+    is_saver_f = game.graph.get_node("f").is_saver
+
+    FlipSavers(list_players).apply(game)
+
+    assert game.graph.get_node("a").is_saver is not is_saver_a
+    assert game.graph.get_node("f").is_saver is not is_saver_f
+
+
+def test_homogenize_savers_to(init_deterministic_game):
+    """Test the HomogenizeSaversTo shock."""
+
+    game = init_deterministic_game
+
+    HomogenizeSaversTo(True).apply(game)
+    assert game.get_num_savers() == game.get_num_players()
+
+    HomogenizeSaversTo(False).apply(game)
+    assert game.get_num_savers() == 0
