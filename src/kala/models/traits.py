@@ -97,8 +97,12 @@ class SaverTraits(BaseAgentTraits):
         if update_rule.should_update(memory):
             # print below is useful for debugging
             # print(f"user is flipping: {self.is_saver}->{not self.is_saver}")
-            self.is_saver = not self.is_saver
+            self.flip_saver_trait()
             self.memory = deque([], maxlen=self.updates_from_n_last_games)
+
+    def flip_saver_trait(self) -> None:
+        """Flip the is_saver trait."""
+        self.is_saver = not self.is_saver
 
     def reset(self) -> None:
         """Reset the agent memory."""

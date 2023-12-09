@@ -1,6 +1,7 @@
 """Module defining different types of shocks."""
 
 from abc import ABC, abstractmethod
+from typing import Sequence
 
 import numpy as np
 from numpy.random import Generator
@@ -155,3 +156,60 @@ class AddRandomEdge(BaseShock):
         if v is not None:
             print(f"adding edge: ({u}, {v})")
             game.graph.add_edge(u, v)
+
+
+class FlipSaver(BaseShock):
+    """Flip an agent's saving trait"""
+
+    def __init__(self, node: AgentT | int | str):
+        self.node = node
+
+    def apply(self, game: DiscreteGameT):
+        node = game.graph.get_node(self.node)
+        node.flip_saver_trait()
+
+
+class FlipRandomSaver(BaseShock):
+    """Flip a random agent's saving trait"""
+
+    def __init__(self, rng: Generator | int | None = None):
+        self.rng = np.random.default_rng(rng)
+
+    def apply(self, game: DiscreteGameT):
+        node = game.graph.select_random_node(rng=self.rng)
+        node.flip_saver_trait()
+
+
+class FlipSavers(BaseShock):
+    "Flip agents' saving traits from Sequence"
+
+    def __init__(self, list_of_agents: Sequence[AgentT | int | str]):
+        self.list_of_agents = list_of_agents
+
+    def apply(self, game: DiscreteGameT):
+        for agent in self.list_of_agents:
+            node = game.graph.get_node(agent)
+            node.flip_saver_trait()
+
+
+class FlipAllSavers(BaseShock):
+    """Flip all savers in a game"""
+
+    def apply(self, game: DiscreteGameT):
+        for node in game.graph.get_nodes():
+            node.flip_saver_traint()
+
+
+class HomogenizeSaversTo(BaseShock):
+    """Shock to homogenize savers to a given target trait"""
+
+    def __init__(self, target: bool):
+        self.target = target
+
+    def apply(self, game: DiscreteGameT):
+        filt = game.create_filter_from_trait("is_saver", self.target)
+
+        for agent, val in enumerate(filt):
+            if not val:
+                node = game.graph.get_node(agent)
+                node.flip_saver_trait()
