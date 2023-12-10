@@ -197,7 +197,7 @@ class FlipAllSavers(BaseShock):
 
     def apply(self, game: DiscreteGameT):
         for node in game.graph.get_nodes():
-            node.flip_saver_traint()
+            node.flip_saver_trait()
 
 
 class HomogenizeSaversTo(BaseShock):
@@ -213,3 +213,45 @@ class HomogenizeSaversTo(BaseShock):
             if not val:
                 node = game.graph.get_node(agent)
                 node.flip_saver_trait()
+
+
+class ChangePlayerMemoryLength(BaseShock):
+    """Shock to change the memory length of an agent"""
+
+    def __init__(self, node: AgentT | int | str, new_memory_length: int):
+        self.memory_length = new_memory_length
+        self.node = node
+
+    def apply(self, game: DiscreteGameT):
+        node = game.graph.get_node(self.node)
+        node.change_memory_length(self.memory_length)
+
+
+class ChangeRandomPlayerMemoryLength(BaseShock):
+    """Shock to change the memory length of a random agent"""
+
+    def __init__(self, new_memory_length: int, rng: Generator | int | None = None):
+        self.memory_length = new_memory_length
+        self.rng = rng
+
+    def apply(self, game: DiscreteGameT):
+        node = game.graph.select_random_node(rng=self.rng)
+        node.change_memory_length(self.memory_length)
+
+
+class ChangeAllPlayersMemoryLength(BaseShock):
+    """Shock to change all players memory with an integer or a list of integers"""
+
+    def __init__(self, new_memory_length: int | Sequence[int]):
+        self.memory_length = new_memory_length
+
+    def apply(self, game: DiscreteGameT):
+        num_players = game.get_num_players()
+
+        if isinstance(self.memory_length, int):
+            for node in game.graph.get_nodes():
+                node.change_memory_length(self.memory_length)
+        else:
+            assert len(self.memory_length) == num_players
+            for i, node in enumerate(game.graph.get_nodes()):
+                node.change_memory_length(self.memory_length[i])
