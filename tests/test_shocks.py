@@ -17,6 +17,8 @@ from kala.models.shocks import (
     ChangeAllPlayersMemoryLength,
     ChangePlayerMemoryLength,
     ChangeRandomPlayerMemoryLength,
+    ChangeDifferentialEfficient,
+    ChangeDifferentialInefficient,
 )
 
 
@@ -187,7 +189,7 @@ def test_change_player_memory_length(init_deterministic_game):
 
 
 def test_change_random_player_memory_length(init_deterministic_game):
-    """Test the ChangeRandomPlyaerMemoryLength"""
+    """Test the ChangeRandomPlyaerMemoryLength shock."""
     game = init_deterministic_game
 
     ChangeRandomPlayerMemoryLength(100).apply(game)
@@ -198,7 +200,7 @@ def test_change_random_player_memory_length(init_deterministic_game):
 
 
 def test_change_all_players_memory_length_int(init_deterministic_game):
-    """Test the ChangeAllPlayersMemoryLength."""
+    """Test the ChangeAllPlayersMemoryLength shock."""
     game = init_deterministic_game
 
     ChangeAllPlayersMemoryLength(100).apply(game)
@@ -208,7 +210,7 @@ def test_change_all_players_memory_length_int(init_deterministic_game):
 
 
 def test_change_all_players_memory_length_sequence(init_deterministic_game):
-    """Test the ChangeAllPlayersMemoryLength."""
+    """Test the ChangeAllPlayersMemoryLength shock."""
     game = init_deterministic_game
 
     memory_dist = [1, 2, 3, 4, 5, 6]
@@ -217,3 +219,22 @@ def test_change_all_players_memory_length_sequence(init_deterministic_game):
     memories = [node.get_trait("updates_from_n_last_games") for node in game.graph.get_nodes()]
     memories.sort()
     assert memories == memory_dist
+
+
+def test_change_differential_efficient(init_deterministic_game):
+    """Test the ChangeDifferentialEfficient shock."""
+    game = init_deterministic_game
+
+    ChangeDifferentialEfficient(0).apply(game)
+
+    assert game.strategy.payoff_matrix[("saver", "saver")] == (1.0, 1.0)
+
+
+def test_change_differential_inefficient(init_deterministic_game):
+    """Test the ChangeDifferentialInefficient shock."""
+    game = init_deterministic_game
+
+    ChangeDifferentialInefficient(0.5).apply(game)
+
+    assert game.strategy.payoff_matrix[("saver", "non-saver")] == (0.5, 1.0)
+    assert game.strategy.payoff_matrix[("non-saver", "saver")] == (1.0, 0.5)
