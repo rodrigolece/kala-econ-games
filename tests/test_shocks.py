@@ -3,22 +3,22 @@
 from kala.models.shocks import (
     AddEdge,
     AddRandomEdge,
+    ChangeAllPlayersMemoryLength,
+    ChangeDifferentialEfficient,
+    ChangeDifferentialInefficient,
+    ChangePlayerMemoryLength,
+    ChangeRandomPlayerMemoryLength,
+    FlipAllSavers,
+    FlipRandomSaver,
+    FlipSaver,
+    FlipSavers,
+    HomogenizeSaversTo,
     RemoveEdge,
     RemovePlayer,
     RemoveRandomEdge,
     RemoveRandomPlayer,
     SwapEdge,
     SwapRandomEdge,
-    FlipRandomSaver,
-    FlipSaver,
-    FlipSavers,
-    HomogenizeSaversTo,
-    FlipAllSavers,
-    ChangeAllPlayersMemoryLength,
-    ChangePlayerMemoryLength,
-    ChangeRandomPlayerMemoryLength,
-    ChangeDifferentialEfficient,
-    ChangeDifferentialInefficient,
 )
 
 
@@ -192,9 +192,9 @@ def test_change_random_player_memory_length(init_deterministic_game):
     """Test the ChangeRandomPlyaerMemoryLength shock."""
     game = init_deterministic_game
 
-    ChangeRandomPlayerMemoryLength(100).apply(game)
+    ChangeRandomPlayerMemoryLength(1000).apply(game)
 
-    filt = game.create_filter_from_trait("updates_from_n_last_games", 100)
+    filt = game.create_filter_from_trait("updates_from_n_last_games", 1000)
 
     assert sum(filt) == 1
 
