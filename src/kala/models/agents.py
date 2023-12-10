@@ -145,7 +145,7 @@ class InvestorAgent(BaseAgent):
         min_specialization: float = 0.0,
         income_per_period: float = 1.0,
         homophily: float | None = None,
-        update_from_n_last_games: int = 0,
+        updates_from_n_last_games: int = 0,
         update_rule: MemoryRuleT | None = None,
         uuid: int | str | None = None,
         rng: int | None = None,
@@ -165,7 +165,7 @@ class InvestorAgent(BaseAgent):
         homophily : float | None
             The homophily of the agent (default is None), if passed should be a
             number between [0, 1].
-        update_from_n_last_games : int
+        updates_from_n_last_games : int
             The number of previous outcomes kept in memory to decide whether to
             change the saving strategy (default is 0).
         update_rule: MemoryRuleT | None
@@ -184,7 +184,7 @@ class InvestorAgent(BaseAgent):
             min_consumption=0,  # not being used
             min_specialization=min_specialization,
             homophily=homophily,
-            updates_from_n_last_games=update_from_n_last_games,
+            updates_from_n_last_games=updates_from_n_last_games,
         )
 
         props = SaverProperties(
@@ -207,6 +207,14 @@ class InvestorAgent(BaseAgent):
     def reset(self) -> None:
         self._properties.reset()
         self._traits.reset()
+
+    def flip_saver_trait(self) -> None:
+        """Flip the is_saver trait."""
+        self._traits.flip_saver_trait()
+
+    def change_memory_length(self, new_memory_length: int) -> None:
+        "Change the memory length of an agent."
+        self._traits.change_memory_length(new_memory_length)
 
     def get_savings(self) -> float:
         """Handy direct access to property savings."""

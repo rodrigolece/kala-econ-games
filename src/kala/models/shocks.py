@@ -159,7 +159,7 @@ class AddRandomEdge(BaseShock):
 
 
 class FlipSaver(BaseShock):
-    """Flip an agent's saving trait"""
+    """Flip an agent's saving trait."""
 
     def __init__(self, node: AgentT | int | str):
         self.node = node
@@ -170,7 +170,7 @@ class FlipSaver(BaseShock):
 
 
 class FlipRandomSaver(BaseShock):
-    """Flip a random agent's saving trait"""
+    """Flip a random agent's saving trait."""
 
     def __init__(self, rng: Generator | int | None = None):
         self.rng = np.random.default_rng(rng)
@@ -181,7 +181,7 @@ class FlipRandomSaver(BaseShock):
 
 
 class FlipSavers(BaseShock):
-    "Flip agents' saving traits from Sequence"
+    "Flip agents' saving traits from Sequence."
 
     def __init__(self, list_of_agents: Sequence[AgentT | int | str]):
         self.list_of_agents = list_of_agents
@@ -193,15 +193,15 @@ class FlipSavers(BaseShock):
 
 
 class FlipAllSavers(BaseShock):
-    """Flip all savers in a game"""
+    """Flip all savers in a game."""
 
     def apply(self, game: DiscreteGameT):
         for node in game.graph.get_nodes():
-            node.flip_saver_traint()
+            node.flip_saver_trait()
 
 
 class HomogenizeSaversTo(BaseShock):
-    """Shock to homogenize savers to a given target trait"""
+    """Shock to homogenize savers to a given target trait."""
 
     def __init__(self, target: bool):
         self.target = target
@@ -213,3 +213,68 @@ class HomogenizeSaversTo(BaseShock):
             if not val:
                 node = game.graph.get_node(agent)
                 node.flip_saver_trait()
+
+
+class ChangePlayerMemoryLength(BaseShock):
+    """Shock to change the memory length of an agent."""
+
+    def __init__(self, node: AgentT | int | str, new_memory_length: int):
+        self.memory_length = new_memory_length
+        self.node = node
+
+    def apply(self, game: DiscreteGameT):
+        node = game.graph.get_node(self.node)
+        node.change_memory_length(self.memory_length)
+
+
+class ChangeRandomPlayerMemoryLength(BaseShock):
+    """Shock to change the memory length of a random agent."""
+
+    def __init__(self, new_memory_length: int, rng: Generator | int | None = None):
+        self.memory_length = new_memory_length
+        self.rng = rng
+
+    def apply(self, game: DiscreteGameT):
+        node = game.graph.select_random_node(rng=self.rng)
+        node.change_memory_length(self.memory_length)
+
+
+class ChangeAllPlayersMemoryLength(BaseShock):
+    """Shock to change all players memory with an integer or a list of integers."""
+
+    def __init__(self, new_memory_length: int | Sequence[int]):
+        self.memory_length = new_memory_length
+
+    def apply(self, game: DiscreteGameT):
+        num_players = game.get_num_players()
+
+        if isinstance(self.memory_length, int):
+            for node in game.graph.get_nodes():
+                node.change_memory_length(self.memory_length)
+        else:
+            assert len(self.memory_length) == num_players
+            for i, node in enumerate(game.graph.get_nodes()):
+                node.change_memory_length(self.memory_length[i])
+
+
+class ChangeDifferentialEfficient(BaseShock):
+    """Shock to change the differential efficient parameter of the game strategy."""
+
+    def __init__(self, new_differential_efficient: float):
+        self.differential_efficient = new_differential_efficient
+
+    def apply(self, game: DiscreteGameT):
+        payoff_ss = 1 + self.differential_efficient
+        game.strategy.payoff_matrix[("saver", "saver")] = (payoff_ss, payoff_ss)
+
+
+class ChangeDifferentialInefficient(BaseShock):
+    """Shock to change the differential inefficient parameter of the game strategy."""
+
+    def __init__(self, new_differential_inefficient: float):
+        self.differential_inefficient = new_differential_inefficient
+
+    def apply(self, game: DiscreteGameT):
+        payoff_sn = 1 - self.differential_inefficient
+        game.strategy.payoff_matrix[("saver", "non-saver")] = (payoff_sn, 1)
+        game.strategy.payoff_matrix[("non-saver", "saver")] = (1, payoff_sn)

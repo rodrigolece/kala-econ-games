@@ -104,6 +104,10 @@ class SaverTraits(BaseAgentTraits):
         """Flip the is_saver trait."""
         self.is_saver = not self.is_saver
 
+    def change_memory_length(self, new_memory_length: int) -> None:
+        "Change the memory length of an agent."
+        self.updates_from_n_last_games = new_memory_length
+
     def reset(self) -> None:
         """Reset the agent memory."""
         if self.memory is not None:

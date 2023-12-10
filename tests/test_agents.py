@@ -31,7 +31,7 @@ def test_init_of_simple_agent(simple_investor_agent):
 @pytest.fixture
 def memoried_investor_agent():
     """Investor agent with memory."""
-    return InvestorAgent(is_saver=False, update_from_n_last_games=NUM_GAMES)
+    return InvestorAgent(is_saver=False, updates_from_n_last_games=NUM_GAMES)
 
 
 def test_init_of_memoried_agent(memoried_investor_agent):
