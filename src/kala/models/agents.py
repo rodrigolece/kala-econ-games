@@ -5,27 +5,8 @@ from typing import Any, Generic, TypeVar
 
 from kala.models.memory_rules import AverageMemoryRule, MemoryRuleT
 from kala.models.properties import PropertiesT, SaverProperties
-
-# from .strategies import BaseStrategy
 from kala.models.traits import SaverTraits, TraitsT
 from kala.utils.misc import universally_unique_identifier
-
-
-# class NeighbourhoodMixin:
-#     def __init__(self, graph: GraphT, node: int | str, *args, **kwargs):
-#         self._graph = graph
-#         self._node = node
-#         self._neighbourhood = list(graph.get_neighbours(node))
-
-#     def choose_neighbour(self, seed):
-#         node = choice(self._neighbourhood, rng=seed)
-
-# Inherit like so
-# class BaseAgent(NeighbourhoodMixin, ABC):
-# Inside __init__ initialise like so
-#         # Explicitly need to call super bcs of non-standard init inside the Mixin
-#         # See: https://stackoverflow.com/a/50465583/5998704
-#         super().__init__(graph)
 
 
 class BaseAgent(
@@ -49,7 +30,6 @@ class BaseAgent(
 
     """
 
-    # strategy: TODO
     _traits: TraitsT
     _properties: PropertiesT
     update_rule: MemoryRuleT
