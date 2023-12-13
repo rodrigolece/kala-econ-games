@@ -16,6 +16,12 @@ class BaseShock(ABC):
 
     """
 
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}()"
+
+    def __repr__(self) -> str:
+        return f"<{str(self)}>"
+
     @abstractmethod
     def apply(self, game: DiscreteGameT) -> None:
         """Apply the shock to the game (this modifies the game in place)."""
@@ -181,7 +187,7 @@ class FlipRandomSaver(BaseShock):
 
 
 class FlipSavers(BaseShock):
-    "Flip agents' saving traits from Sequence."
+    """Flip agents' saving traits from Sequence."""
 
     def __init__(self, list_of_agents: Sequence[AgentT | int | str]):
         self.list_of_agents = list_of_agents
