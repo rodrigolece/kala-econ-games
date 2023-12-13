@@ -36,6 +36,14 @@ class BaseGraph(ABC, Generic[AgentT]):
     _nodes: list[AgentT]
     _addition_order: dict[str, int]
 
+    def __str__(self) -> str:
+        agent_type_str = f"[{type(self._nodes[0]).__name__}]" if self._nodes else ""
+        n, e = self.num_nodes(), self.num_edges()
+        return f"{self.__class__.__name__}{agent_type_str}(num_nodes={n}, num_edges={e})"
+
+    def __repr__(self) -> str:
+        return f"<{str(self)}>"
+
     @abstractmethod
     def get_node(self, nid: int | str) -> AgentT:
         """Get the node object given its id."""

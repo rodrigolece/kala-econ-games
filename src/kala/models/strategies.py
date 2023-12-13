@@ -34,6 +34,12 @@ class BaseStrategy(ABC):
     def __init__(self, *args, **kwargs):
         pass
 
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}(stochastic={self.stochastic})"
+
+    def __repr__(self) -> str:
+        return f"<{str(self)}>"
+
     @abstractmethod
     def calculate_payoff(self, *args, **kwargs) -> tuple[float, ...]:
         """A realization of the payoff for a strategy."""

@@ -16,6 +16,12 @@ class BaseShock(ABC):
 
     """
 
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}()"
+
+    def __repr__(self) -> str:
+        return f"<{str(self)}>"
+
     @abstractmethod
     def apply(self, game: DiscreteGameT) -> None:
         """Apply the shock to the game (this modifies the game in place)."""

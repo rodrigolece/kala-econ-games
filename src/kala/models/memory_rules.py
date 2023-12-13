@@ -19,6 +19,12 @@ class BaseMemoryRule(ABC):
     def __init__(self, *args, **kwargs) -> None:
         """Initialize the memory rule."""
 
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}>"
+
+    def __str__(self) -> str:
+        return f"<{str(self)}>"
+
     @abstractmethod
     def should_update(self, memory: deque) -> bool:
         """

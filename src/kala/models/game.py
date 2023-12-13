@@ -7,12 +7,11 @@ from typing import Any, Generic, Sequence, TypeVar
 import numpy as np
 from numpy.random import Generator
 
-from kala.models.agents import AgentT
 from kala.models.graphs import GraphT
 from kala.models.strategies import StrategyT
 
 
-class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
+class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
     """
     Base game meant to be subclassed.
 
@@ -45,6 +44,15 @@ class DiscreteBaseGame(ABC, Generic[AgentT, GraphT, StrategyT]):
         self.time = 0
         self.graph = graph
         self.strategy = strategy
+
+    def __str__(self) -> str:
+        graph_str = type(self.graph).__name__
+        stgy_str = type(self.strategy).__name__
+        t, np = self.time, self.get_num_players()
+        return f"{self.__class__.__name__}[{graph_str}, {stgy_str}](time={t}, num_players={np})"
+
+    def __repr__(self) -> str:
+        return f"<{str(self)}>"
 
     def _get_players(self):
         # NB: networkx; implementation makes it necessary to call this method to filter out None's

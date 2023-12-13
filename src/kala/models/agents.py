@@ -76,7 +76,14 @@ class BaseAgent(
         return hash(self.uuid)
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}({self.uuid})"
+        return f"{self.__class__.__name__}(uuid='{self.uuid}')"
+
+    def __repr__(self) -> str:
+        out = f"{str(self)[:-1]}, "
+        for k, v in self._traits.to_dict().items():
+            if v is not None and k not in ("min_consumption", "min_specialization"):
+                out += f"{k}={v}, "
+        return out[:-2] + ")>"
 
     # pylint: disable=protected-access
     def get_property(self, property_name: str) -> Any:
