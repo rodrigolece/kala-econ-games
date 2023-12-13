@@ -151,7 +151,7 @@ class SimpleGraph(BaseGraph, Generic[AgentT]):
     _nodes: list[AgentT | None]
 
     def __init__(self, graph: nx.Graph, nodes: Sequence[AgentT]):
-        self._graph = graph
+        self._graph = graph.copy()  # to avoid corruption due to the original graph being modified
         self._nodes = []
         self._addition_order = {}
 
