@@ -181,7 +181,7 @@ class FlipRandomSaver(BaseShock):
 
 
 class FlipSavers(BaseShock):
-    "Flip agents' saving traits from Sequence."
+    """Flip agents' saving traits from Sequence."""
 
     def __init__(self, list_of_agents: Sequence[AgentT | int | str]):
         self.list_of_agents = list_of_agents
