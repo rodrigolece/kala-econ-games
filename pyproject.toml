@@ -1,7 +1,7 @@
 
 [project]
 name = "kala-econ-games"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
     { name = "Rodrigo L.C.", email = "rodrigolealc@ciencias.unam.mx" },
     { name = "Leonardo C.G.", email = "lmcastrogonzalez@turing.ac.uk" },
@@ -62,4 +62,5 @@ dev = [
     "ipython>=8.17.2",
     "pyroma>=4.2",
     "pydocstyle>=6.3.0",
+    "grip>=4.6.2",
 ]
