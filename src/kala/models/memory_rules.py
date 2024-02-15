@@ -1,4 +1,5 @@
 """Module defining the learning/updating strategies available for agents."""
+
 from abc import ABC, abstractmethod
 from collections import deque
 from typing import TypeVar
@@ -61,7 +62,7 @@ class WeightedMemoryRule(BaseMemoryRule):
 
 class FractionMemoryRule(BaseMemoryRule):
     """
-    Memory rule that ascertains that an agent should updates its strategy if the
+    Memory rule that ascertains that an agent should update its strategy if the
     fraction of games won is below a certain fraction.
     """
 
@@ -73,7 +74,16 @@ class FractionMemoryRule(BaseMemoryRule):
 
     def should_update(self, memory: deque) -> bool:
         n = memory.maxlen  # pylint: disable=invalid-name
-        return len(memory) == n and sum(memory) < n * self.fraction
+
+        if len(memory) != n:
+            return False
+
+        if self.fraction == 0:
+            # NB: we add this condition so that FractionMemoryRule(fraction=0)
+            # is equivalent to AllPastMemoryRule
+            return sum(memory) == 0
+
+        return sum(memory) < n * self.fraction
 
 
 class AverageMemoryRule(BaseMemoryRule):
@@ -101,7 +111,7 @@ class AllPastMemoryRule(BaseMemoryRule):
 
     def should_update(self, memory: deque) -> bool:
         n = memory.maxlen  # pylint: disable=invalid-name
-        return len(memory) == n and sum(memory) == n
+        return len(memory) == n and sum(memory) == 0
 
 
 class AnyPastMemoryRule(BaseMemoryRule):
@@ -114,4 +124,4 @@ class AnyPastMemoryRule(BaseMemoryRule):
 
     def should_update(self, memory: deque) -> bool:
         n = memory.maxlen  # pylint: disable=invalid-name
-        return len(memory) == n and sum(memory) > 0
+        return len(memory) == n and sum(memory) < n
