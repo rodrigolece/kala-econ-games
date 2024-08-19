@@ -8,6 +8,7 @@ from numpy.random import Generator
 
 from kala.models.agents import AgentT
 from kala.models.game import DiscreteGameT
+from kala.utils.config import DEBUG
 
 
 class BaseShock(ABC):
@@ -35,11 +36,12 @@ class RemovePlayer(BaseShock):
 
     def apply(self, game: DiscreteGameT):
         node = game.graph.get_node(self.node) if isinstance(self.node, int | str) else self.node
-        if node is None:
+        if DEBUG and node is None:
             print("node not found; passing")
             return
 
-        print("removing player", node)
+        if DEBUG:
+            print("removing player", node)
         game.graph.remove_node(node)
 
 
@@ -51,7 +53,8 @@ class RemoveRandomPlayer(BaseShock):
 
     def apply(self, game: DiscreteGameT):
         node = game.graph.select_random_node(rng=self.rng)
-        print("removing player", node)
+        if DEBUG:
+            print("removing player", node)
         game.graph.remove_node(node)
 
 
@@ -65,7 +68,8 @@ class RemoveEdge(BaseShock):
     def apply(self, game: DiscreteGameT):
         u = game.graph.get_node(self.u) if isinstance(self.u, int | str) else self.u
         v = game.graph.get_node(self.v) if isinstance(self.v, int | str) else self.v
-        print(f"removing edge ({u}, {v})")
+        if DEBUG:
+            print(f"removing edge ({u}, {v})")
         game.graph.remove_edge(u, v)
 
 
@@ -80,7 +84,8 @@ class RemoveRandomEdge(BaseShock):
         v = game.graph.select_random_neighbour(u, rng=self.rng)
 
         if v is not None:
-            print(f"removing edge ({u}, {v})")
+            if DEBUG:
+                print(f"removing edge ({u}, {v})")
             game.graph.remove_edge(u, v)
 
 
@@ -93,7 +98,8 @@ class SwapEdge(BaseShock):
         self.w = w
 
     def apply(self, game: DiscreteGameT):
-        print(f"swapping edge: ({self.pivot_u}, {self.v}) -> ({self.pivot_u}, {self.w})")
+        if DEBUG:
+            print(f"swapping edge: ({self.pivot_u}, {self.v}) -> ({self.pivot_u}, {self.w})")
 
         game.graph.remove_edge(self.pivot_u, self.v)
         game.graph.add_edge(self.pivot_u, self.w)
@@ -121,7 +127,8 @@ class SwapRandomEdge(BaseShock):
             attempts += 1
 
         if v is not None:
-            print(f"swapping edge: ({pivot_u}, {v}) -> ({pivot_u}, {w})")
+            if DEBUG:
+                print(f"swapping edge: ({pivot_u}, {v}) -> ({pivot_u}, {w})")
             game.graph.remove_edge(pivot_u, v)
             game.graph.add_edge(pivot_u, w)
 
@@ -134,7 +141,8 @@ class AddEdge(BaseShock):
         self.v = v
 
     def apply(self, game: DiscreteGameT):
-        print(f"Adding edge: ({self.u}, {self.v})")
+        if DEBUG:
+            print(f"Adding edge: ({self.u}, {self.v})")
 
         game.graph.add_edge(self.u, self.v)
 
@@ -160,7 +168,8 @@ class AddRandomEdge(BaseShock):
             attempts += 1
 
         if v is not None:
-            print(f"adding edge: ({u}, {v})")
+            if DEBUG:
+                print(f"Adding edge: ({u}, {v})")
             game.graph.add_edge(u, v)
 
 

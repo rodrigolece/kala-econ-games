@@ -5,6 +5,8 @@ from collections import deque
 from dataclasses import asdict, dataclass
 from typing import Any, TypeVar
 
+from kala.utils.config import DEBUG
+
 
 @dataclass
 class BaseAgentTraits(ABC):
@@ -95,8 +97,8 @@ class SaverTraits(BaseAgentTraits):
         memory.append(successful_round)
 
         if update_rule.should_update(memory):
-            # print below is useful for debugging
-            # print(f"user is flipping: {self.is_saver}->{not self.is_saver}")
+            if DEBUG:
+                print(f"user is flipping: {self.is_saver}->{not self.is_saver}")
             self.flip_saver_trait()
             self.memory = deque([], maxlen=self.updates_from_n_last_games)
 
