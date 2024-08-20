@@ -230,18 +230,6 @@ class HomogenizeSaversTo(BaseShock):
                 node.flip_saver_trait()
 
 
-class ChangePlayerMemoryLength(BaseShock):
-    """Shock to change the memory length of an agent."""
-
-    def __init__(self, node: AgentT | int | str, new_memory_length: int):
-        self.memory_length = new_memory_length
-        self.node = node
-
-    def apply(self, game: DiscreteGameT):
-        node = game.graph.get_node(self.node)
-        node.change_memory_length(self.memory_length)
-
-
 class ChangeRandomPlayerMemoryLength(BaseShock):
     """Shock to change the memory length of a random agent."""
 

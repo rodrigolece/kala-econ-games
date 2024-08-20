@@ -1,9 +1,13 @@
 """Tests the traits module."""
 
 import pytest
+from collections import deque
 
 from kala.models.memory_rules import AverageMemoryRule
 from kala.models.traits import SaverTraits
+
+
+NUM_GAMES = 2
 
 
 @pytest.fixture
@@ -14,7 +18,7 @@ def simple_saver_traits():
         is_saver=True,
         min_consumption=1,
         min_specialization=0.1,
-        updates_from_n_last_games=2,
+        memory=deque([], maxlen=NUM_GAMES),
         # homophily=0.5,
     )
 
@@ -37,7 +41,8 @@ def test_init_and_conversion_to_dict(simple_saver_traits):
 def test_memory_trait(simple_saver_traits):
     """Test the memory trait."""
     st = simple_saver_traits
-    rule = AverageMemoryRule()
+    rule = AverageMemoryRule(memory_length=NUM_GAMES)
+    # normally the memory would hold booleans but below we test the values contained
     st.update(successful_round=1, update_rule=rule)
     st.update(successful_round=2, update_rule=rule)
     st.update(successful_round=3, update_rule=rule)  # this should push out the first value

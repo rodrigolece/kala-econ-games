@@ -50,7 +50,6 @@ class SaverTraits(BaseAgentTraits):
     min_consumption: float
     min_specialization: float
     homophily: float | None
-    updates_from_n_last_games: int
     memory: deque | None
     """
 
@@ -59,7 +58,6 @@ class SaverTraits(BaseAgentTraits):
     min_consumption: float
     min_specialization: float
     homophily: float | None = None
-    updates_from_n_last_games: int = 0
     memory: deque | None = None
     # TODO: move 'memory' to properties bcs we shouldn't really have 'update' and 'reset' methods
 
@@ -71,20 +69,10 @@ class SaverTraits(BaseAgentTraits):
         if self.homophily is not None and (not 0 <= self.homophily <= 1):
             raise ValueError("expected number between [0, 1] (inclusive) for 'homophily'")
 
-        # Memory related stuff
-        if self.updates_from_n_last_games < 0 or not isinstance(
-            self.updates_from_n_last_games, int
-        ):
-            raise ValueError("expected non-negative integer for 'updates_from_n_last_games'")
-
-        # initialise memory
-        if self.memory is None and self.updates_from_n_last_games > 0:
-            self.memory = deque([], maxlen=self.updates_from_n_last_games)
-
     # pylint: disable=unused-argument
     def update(self, *args, **kwargs) -> None:
         """Update the is_saver attribute depending on updating rule and memory."""
-        if self.updates_from_n_last_games == 0:
+        if self.memory is None:
             return
 
         if (successful_round := kwargs.get("successful_round", None)) is None:
@@ -99,18 +87,15 @@ class SaverTraits(BaseAgentTraits):
         if update_rule.should_update(memory):
             if DEBUG:
                 print(f"user is flipping: {self.is_saver}->{not self.is_saver}")
+                # TODO: add label to traits so that the debug prints user label
             self.flip_saver_trait()
-            self.memory = deque([], maxlen=self.updates_from_n_last_games)
+            self.memory = deque([], maxlen=memory.maxlen)
 
     def flip_saver_trait(self) -> None:
         """Flip the is_saver trait."""
         self.is_saver = not self.is_saver
 
-    def change_memory_length(self, new_memory_length: int) -> None:
-        "Change the memory length of an agent."
-        self.updates_from_n_last_games = new_memory_length
-
     def reset(self) -> None:
         """Reset the agent memory."""
         if self.memory is not None:
-            self.memory = deque([], maxlen=self.updates_from_n_last_games)
+            self.memory = deque([], maxlen=self.memory.maxlen)

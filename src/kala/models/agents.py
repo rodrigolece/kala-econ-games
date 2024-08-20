@@ -1,6 +1,7 @@
 """Module defining different types of agents"""
 
 from abc import ABC, abstractmethod
+from collections import deque
 from typing import Any, Generic, TypeVar
 
 from kala.models.memory_rules import AverageMemoryRule, MemoryRuleT
@@ -20,6 +21,9 @@ class BaseAgent(
     ----------
     uuid : int | str
         A unique identifier for the agent.
+    update_rule : MemoryRuleT | None
+        The rule used to decide whether the agent should change their saver
+        status depending on the outcome of the previous matches (default is None).
 
     Methods
     -------
@@ -46,9 +50,8 @@ class BaseAgent(
         self._traits = traits
         self._properties = properties
 
-        self.update_rule = (
-            AverageMemoryRule() if update_rule is None else update_rule  # type: ignore
-        )
+        self.update_rule = update_rule
+        # AverageMemoryRule() if update_rule is None else update_rule  # type: ignore
 
         self.uuid = universally_unique_identifier(rng=rng) if uuid is None else uuid
 
@@ -132,7 +135,6 @@ class InvestorAgent(BaseAgent):
         min_specialization: float = 0.0,
         income_per_period: float = 1.0,
         homophily: float | None = None,
-        updates_from_n_last_games: int = 0,
         update_rule: MemoryRuleT | None = None,
         uuid: int | str | None = None,
         rng: int | None = None,
@@ -152,12 +154,9 @@ class InvestorAgent(BaseAgent):
         homophily : float | None
             The homophily of the agent (default is None), if passed should be a
             number between [0, 1].
-        updates_from_n_last_games : int
-            The number of previous outcomes kept in memory to decide whether to
-            change the saving strategy (default is 0).
         update_rule: MemoryRuleT | None
             The rule used to decide whether the agent should change their saver
-             status depending on the outcome of the previous matches (default is None).
+            status depending on the outcome of the previous matches (default is None).
         uuid : int | str | None
             The unique identifier of the agent (default is None and a random string
             is generated).
@@ -165,13 +164,18 @@ class InvestorAgent(BaseAgent):
             The seed used to initialise random generators (default is None).
         """
 
+        if update_rule is not None:
+            agent_memory = deque([], maxlen=update_rule.memory_length)
+        else:
+            agent_memory = None
+
         traits = SaverTraits(
             is_saver=is_saver,
             group=group,
             min_consumption=0,  # not being used
             min_specialization=min_specialization,
             homophily=homophily,
-            updates_from_n_last_games=updates_from_n_last_games,
+            memory=agent_memory,
         )
 
         props = SaverProperties(

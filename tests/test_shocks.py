@@ -3,11 +3,8 @@
 from kala.models.shocks import (
     AddEdge,
     AddRandomEdge,
-    ChangeAllPlayersMemoryLength,
     ChangeDifferentialEfficient,
     ChangeDifferentialInefficient,
-    ChangePlayerMemoryLength,
-    ChangeRandomPlayerMemoryLength,
     FlipAllSavers,
     FlipRandomSaver,
     FlipSaver,
@@ -173,52 +170,6 @@ def test_homogenize_savers_to(init_deterministic_game):
 
     HomogenizeSaversTo(False).apply(game)
     assert game.get_num_savers() == 0
-
-
-def test_change_player_memory_length(init_deterministic_game):
-    """Test the ChangePlayerMemoryLength shock."""
-
-    game = init_deterministic_game
-
-    ChangePlayerMemoryLength("a", 100).apply(game)
-
-    node = game.graph.get_node("a")
-    new_memory_length = node.get_trait("updates_from_n_last_games")
-
-    assert new_memory_length == 100
-
-
-def test_change_random_player_memory_length(init_deterministic_game):
-    """Test the ChangeRandomPlyaerMemoryLength shock."""
-    game = init_deterministic_game
-
-    ChangeRandomPlayerMemoryLength(1000).apply(game)
-
-    filt = game.create_filter_from_trait("updates_from_n_last_games", 1000)
-
-    assert sum(filt) == 1
-
-
-def test_change_all_players_memory_length_int(init_deterministic_game):
-    """Test the ChangeAllPlayersMemoryLength shock."""
-    game = init_deterministic_game
-
-    ChangeAllPlayersMemoryLength(100).apply(game)
-
-    filt = game.create_filter_from_trait("updates_from_n_last_games", 100)
-    assert sum(filt) == game.get_num_players()
-
-
-def test_change_all_players_memory_length_sequence(init_deterministic_game):
-    """Test the ChangeAllPlayersMemoryLength shock."""
-    game = init_deterministic_game
-
-    memory_dist = [1, 2, 3, 4, 5, 6]
-    ChangeAllPlayersMemoryLength(memory_dist).apply(game)
-
-    memories = [node.get_trait("updates_from_n_last_games") for node in game.graph.get_nodes()]
-    memories.sort()
-    assert memories == memory_dist
 
 
 def test_change_differential_efficient(init_deterministic_game):
