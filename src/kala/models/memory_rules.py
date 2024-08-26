@@ -23,7 +23,7 @@ class BaseMemoryRule(ABC):
 
     """
 
-    def __init__(self, memory_length: int = 1, **kwargs) -> None:
+    def __init__(self, memory_length: int = 1, **kwargs) -> None:  # pylint: disable=unused-argument
         """Initialize the memory rule."""
         if memory_length < 0 or not isinstance(memory_length, int):
             raise ValueError("expected non-negative integer for 'memory_length'")
@@ -126,7 +126,6 @@ class AllPastMemoryRule(BaseMemoryRule):
         self.name = "All Past Memory Rule"
 
     def should_update(self, memory: deque) -> bool:
-
         return len(memory) == self.memory_length and sum(memory) == 0
 
 

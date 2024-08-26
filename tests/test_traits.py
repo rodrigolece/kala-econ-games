@@ -1,7 +1,8 @@
 """Tests the traits module."""
 
-import pytest
 from collections import deque
+
+import pytest
 
 from kala.models.memory_rules import AverageMemoryRule
 from kala.models.traits import SaverTraits

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections import deque
 from typing import Any, Generic, TypeVar
 
-from kala.models.memory_rules import AverageMemoryRule, MemoryRuleT
+from kala.models.memory_rules import MemoryRuleT
 from kala.models.properties import PropertiesT, SaverProperties
 from kala.models.traits import SaverTraits, TraitsT
 from kala.utils.misc import universally_unique_identifier
@@ -36,7 +36,7 @@ class BaseAgent(
 
     _traits: TraitsT
     _properties: PropertiesT
-    update_rule: MemoryRuleT
+    update_rule: MemoryRuleT | None
     uuid: int | str
 
     def __init__(
@@ -164,10 +164,11 @@ class InvestorAgent(BaseAgent):
             The seed used to initialise random generators (default is None).
         """
 
+        memory: deque | None
         if update_rule is not None:
-            agent_memory = deque([], maxlen=update_rule.memory_length)
+            memory = deque([], maxlen=update_rule.memory_length)
         else:
-            agent_memory = None
+            memory = None
 
         traits = SaverTraits(
             is_saver=is_saver,
@@ -175,7 +176,7 @@ class InvestorAgent(BaseAgent):
             min_consumption=0,  # not being used
             min_specialization=min_specialization,
             homophily=homophily,
-            memory=agent_memory,
+            memory=memory,
         )
 
         props = SaverProperties(
