@@ -36,24 +36,20 @@ class BaseAgent(
 
     _traits: TraitsT
     _properties: PropertiesT
-    update_rule: MemoryRuleT | None
     uuid: int | str
+    update_rule: MemoryRuleT | None
 
     def __init__(
         self,
         traits: TraitsT,
         properties: PropertiesT,
+        uuid: int | str,
         update_rule: MemoryRuleT | None = None,
-        uuid: int | str | None = None,
-        rng: int | None = None,
     ) -> None:
         self._traits = traits
         self._properties = properties
-
+        self.uuid = uuid
         self.update_rule = update_rule
-        # AverageMemoryRule() if update_rule is None else update_rule  # type: ignore
-
-        self.uuid = universally_unique_identifier(rng=rng) if uuid is None else uuid
 
     def __hash__(self):
         return hash(self.uuid)
@@ -164,24 +160,20 @@ class InvestorAgent(BaseAgent):
             The seed used to initialise random generators (default is None).
         """
 
-        memory: deque | None
-        if update_rule is not None:
-            memory = deque([], maxlen=update_rule.memory_length)
-        else:
-            memory = None
+        uuid = universally_unique_identifier(rng=rng) if uuid is None else uuid
 
         traits = SaverTraits(
-            is_saver=is_saver,
             group=group,
             min_consumption=0,  # not being used
             min_specialization=min_specialization,
             homophily=homophily,
-            memory=memory,
         )
 
         props = SaverProperties(
+            is_saver=is_saver,
             savings=0.0,  # all agents initialised with zero savings
             income_per_period=income_per_period,
+            memory=deque([], maxlen=update_rule.memory_length) if update_rule is not None else None,
         )
 
         super().__init__(
@@ -189,29 +181,22 @@ class InvestorAgent(BaseAgent):
             properties=props,
             update_rule=update_rule,
             uuid=uuid,
-            rng=rng,
         )
 
     def update(self, *args, **kwargs) -> None:
-        self._properties.update(*args, **kwargs)
-        self._traits.update(*args, update_rule=self.update_rule, **kwargs)
+        self._properties.update(*args, update_rule=self.update_rule, uuid=self.uuid, **kwargs)
 
     def reset(self) -> None:
         self._properties.reset()
-        self._traits.reset()
 
-    def flip_saver_trait(self) -> None:
-        """Flip the is_saver trait."""
-        self._traits.flip_saver_trait()
-
-    def change_memory_length(self, new_memory_length: int) -> None:
-        "Change the memory length of an agent."
-        self._traits.change_memory_length(new_memory_length)
+    def flip_saver_property(self) -> None:
+        """Flip the is_saver property."""
+        self._properties.flip_saver_property()
 
     def get_savings(self) -> float:
         """Handy direct access to property savings."""
         return self.get_property("savings")
 
     def is_saver(self) -> bool:
-        """Handy direct access to trait is_saver."""
-        return self.get_trait("is_saver")
+        """Handy direct access to property is_saver."""
+        return self.get_property("is_saver")

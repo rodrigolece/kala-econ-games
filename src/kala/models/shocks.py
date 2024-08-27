@@ -181,7 +181,7 @@ class FlipSaver(BaseShock):
 
     def apply(self, game: DiscreteGameT):
         node = game.graph.get_node(self.node)
-        node.flip_saver_trait()
+        node.flip_saver_property()
 
 
 class FlipRandomSaver(BaseShock):
@@ -192,7 +192,7 @@ class FlipRandomSaver(BaseShock):
 
     def apply(self, game: DiscreteGameT):
         node = game.graph.select_random_node(rng=self.rng)
-        node.flip_saver_trait()
+        node.flip_saver_property()
 
 
 class FlipSavers(BaseShock):
@@ -204,7 +204,7 @@ class FlipSavers(BaseShock):
     def apply(self, game: DiscreteGameT):
         for agent in self.list_of_agents:
             node = game.graph.get_node(agent)
-            node.flip_saver_trait()
+            node.flip_saver_property()
 
 
 class FlipAllSavers(BaseShock):
@@ -212,7 +212,7 @@ class FlipAllSavers(BaseShock):
 
     def apply(self, game: DiscreteGameT):
         for node in game.graph.get_nodes():
-            node.flip_saver_trait()
+            node.flip_saver_property()
 
 
 class HomogenizeSaversTo(BaseShock):
@@ -222,12 +222,12 @@ class HomogenizeSaversTo(BaseShock):
         self.target = target
 
     def apply(self, game: DiscreteGameT):
-        filt = game.create_filter_from_trait("is_saver", self.target)
+        filt = game.create_filter_from_property("is_saver", self.target)
 
         for agent, val in enumerate(filt):
             if not val:
                 node = game.graph.get_node(agent)
-                node.flip_saver_trait()
+                node.flip_saver_property()
 
 
 class ChangeRandomPlayerMemoryLength(BaseShock):

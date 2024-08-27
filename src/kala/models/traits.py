@@ -1,11 +1,8 @@
 """Module defining agent traits"""
 
 from abc import ABC
-from collections import deque
 from dataclasses import asdict, dataclass
 from typing import Any, TypeVar
-
-from kala.utils.config import DEBUG
 
 
 @dataclass
@@ -45,57 +42,22 @@ class SaverTraits(BaseAgentTraits):
 
     Attributes
     ----------
-    is_saver: bool
     group: int | None
     min_consumption: float
     min_specialization: float
     homophily: float | None
-    memory: deque | None
+
     """
 
-    is_saver: bool
     group: int | None
     min_consumption: float
     min_specialization: float
     homophily: float | None = None
-    memory: deque | None = None
-    # TODO: move 'memory' to properties bcs we shouldn't really have 'update' and 'reset' methods
 
     def __post_init__(self):
-        # First we deal with simple checks
+        # We deal with simple checks
         if not 0 <= self.min_specialization <= 1:
             raise ValueError("expected number between [0, 1] (inclusive) for 'min_specialization'")
 
         if self.homophily is not None and (not 0 <= self.homophily <= 1):
             raise ValueError("expected number between [0, 1] (inclusive) for 'homophily'")
-
-    # pylint: disable=unused-argument
-    def update(self, *args, **kwargs) -> None:
-        """Update the is_saver attribute depending on updating rule and memory."""
-        if self.memory is None:
-            return
-
-        if (successful_round := kwargs.get("successful_round", None)) is None:
-            raise ValueError("expected 'successful_round' keyword argument")
-
-        if (update_rule := kwargs.get("update_rule", None)) is None:
-            raise ValueError("expected 'update_rule' keyword argument")
-
-        memory: deque = self.memory  # type: ignore
-        memory.append(successful_round)
-
-        if update_rule.should_update(memory):
-            if DEBUG:
-                print(f"user is flipping: {self.is_saver}->{not self.is_saver}")
-                # TODO: add label to traits so that the debug prints user label
-            self.flip_saver_trait()
-            self.memory = deque([], maxlen=memory.maxlen)
-
-    def flip_saver_trait(self) -> None:
-        """Flip the is_saver trait."""
-        self.is_saver = not self.is_saver
-
-    def reset(self) -> None:
-        """Reset the agent memory."""
-        if self.memory is not None:
-            self.memory = deque([], maxlen=self.memory.maxlen)
