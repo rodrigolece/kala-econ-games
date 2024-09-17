@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from kala.models.agents import InvestorAgent
+from kala.models.memory_rules import AverageMemoryRule
 
 
 NUM_GAMES = 5
@@ -31,7 +32,8 @@ def test_init_of_simple_agent(simple_investor_agent):
 @pytest.fixture
 def memoried_investor_agent():
     """Investor agent with memory."""
-    return InvestorAgent(is_saver=False, updates_from_n_last_games=NUM_GAMES)
+    update_rule = AverageMemoryRule(memory_length=NUM_GAMES)
+    return InvestorAgent(is_saver=False, update_rule=update_rule)
 
 
 def test_init_of_memoried_agent(memoried_investor_agent):

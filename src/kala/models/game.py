@@ -30,6 +30,7 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
     play_round()
     get_num_players()
     get_total_wealth()
+    create_filter_from_property()
     create_filter_from_trait()
     get_num_savers()
     reset_agents()
@@ -136,6 +137,25 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
         """
         return [player.get_trait(trait_name) == trait_value for player in self._get_players()]
 
+    def create_filter_from_property(self, prop_name: str, prop_value: Any = True) -> list[bool]:
+        """
+        Create a filter from a property name and value.
+
+        Parameters
+        ----------
+        prop_name : str
+            The name of the property.
+        prop_value : Any, optional
+            The value of the property, by default True ('is_saver', which would be the primary use
+            case, is a boolean).
+
+        Returns
+        -------
+        list[bool]
+
+        """
+        return [player.get_property(prop_name) == prop_value for player in self._get_players()]
+
     def get_num_savers(self) -> int:
         """
         Return the number of savers.
@@ -145,7 +165,7 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
         int
 
         """
-        return sum(self.create_filter_from_trait("is_saver"))
+        return sum(self.create_filter_from_property("is_saver"))
 
     def reset_agents(self) -> None:
         """Reset the savings of agents to their initial state."""

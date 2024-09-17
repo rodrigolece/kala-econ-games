@@ -125,8 +125,7 @@ from kala import FractionMemoryRule
 agents = [
     InvestorAgent(
         is_saver=is_saver[i],
-        updates_from_n_last_games=5,
-        update_rule=FractionMemoryRule(fraction=0.75),
+        update_rule=FractionMemoryRule(fraction=0.75, memory_length=5),
         homophily=0.8
     )
     for i in range(num_nodes)
@@ -143,8 +142,7 @@ In order to implement the models in \[**Ernst04**\], we define the class `Invest
 
 - `is_saver`: Boolean indicating whether the agent is a saver or not. This trait is important because it will influence the payoff that our agent will get once they play an opponent that can have the same trait or not.
 - `homophily`: Normally, agents are paired using the topology of a graph in which they are the nodes. The homophily is an optional probability (a number between [0, 1]) which controls whether agents should preferentially select opponents with the same trait or avoid them entirely.
-- `updates_from_n_last_games`: Agents can have a memory of `n` previous games. This goes hand-in hand with the...
-- `update_rule`: A rule which codifies what the agent should do with the outcome of previous `n` games. Normally, an agent records whether their payoff has been smaller than that of its opponent, so they might decide to change their saver trait after loosing half of the `n` games, or all `n` games.
+- `update_rule`: A rule which codifies what the agent should do with the outcome of previous `memory_length` (`n`) games. Normally, an agent records whether their payoff has been smaller than that of its opponent, so they might decide to change their saver trait after loosing half of the `n` games, or all `n` games.
 
 
 #### Traits and properties

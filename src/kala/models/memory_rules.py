@@ -11,14 +11,23 @@ class BaseMemoryRule(ABC):
     """
     Base memory rule intended to be subclassed.
 
+    Attributes
+    ----------
+    memory_length : int
+        The number of previous outcomes kept in memory to decide whether to
+        change the saving strategy (default is 1).
+
     Methods
     -------
     should_update()
 
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, memory_length: int = 1, **kwargs) -> None:  # pylint: disable=unused-argument
         """Initialize the memory rule."""
+        if memory_length < 0 or not isinstance(memory_length, int):
+            raise ValueError("expected non-negative integer for 'memory_length'")
+        self.memory_length = memory_length
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}>"
@@ -43,6 +52,8 @@ class WeightedMemoryRule(BaseMemoryRule):
     """
 
     def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
         if (weights := kwargs.get("weights", None)) is None:
             raise ValueError("expected 'weights' keyword argument")
         self.weights = weights
@@ -54,7 +65,7 @@ class WeightedMemoryRule(BaseMemoryRule):
         self.name = "Weighted Memory Rule"
 
     def should_update(self, memory: deque) -> bool:
-        n = memory.maxlen  # pylint: disable=invalid-name
+        n = self.memory_length  # pylint: disable=invalid-name
         if len(self.weights) != n:
             raise ValueError(f"expected length of {n} for 'weights', observed {len(self.weights)}")
         return len(memory) == n and np.average(memory, weights=self.weights) < self.fraction
@@ -67,13 +78,15 @@ class FractionMemoryRule(BaseMemoryRule):
     """
 
     def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
         if (frac := kwargs.get("fraction", None)) is None:
             raise ValueError("expected 'fraction' keyword argument")
         self.fraction = frac
         self.name = f"Fraction Memory {frac} Rule"
 
     def should_update(self, memory: deque) -> bool:
-        n = memory.maxlen  # pylint: disable=invalid-name
+        n = self.memory_length  # pylint: disable=invalid-name
 
         if len(memory) != n:
             return False
@@ -93,11 +106,13 @@ class AverageMemoryRule(BaseMemoryRule):
     """
 
     def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
         self.fraction = 0.5
         self.name = "Average Memory Rule"
 
     def should_update(self, memory: deque) -> bool:
-        n = memory.maxlen  # pylint: disable=invalid-name
+        n = self.memory_length  # pylint: disable=invalid-name
         return len(memory) == n and sum(memory) < n * self.fraction
 
 
@@ -107,11 +122,11 @@ class AllPastMemoryRule(BaseMemoryRule):
     of the games in memory were lost."""
 
     def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.name = "All Past Memory Rule"
 
     def should_update(self, memory: deque) -> bool:
-        n = memory.maxlen  # pylint: disable=invalid-name
-        return len(memory) == n and sum(memory) == 0
+        return len(memory) == self.memory_length and sum(memory) == 0
 
 
 class AnyPastMemoryRule(BaseMemoryRule):
@@ -120,8 +135,9 @@ class AnyPastMemoryRule(BaseMemoryRule):
     of the games in memory were lost."""
 
     def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.name = "Any Past Memory"
 
     def should_update(self, memory: deque) -> bool:
-        n = memory.maxlen  # pylint: disable=invalid-name
+        n = self.memory_length  # pylint: disable=invalid-name
         return len(memory) == n and sum(memory) < n

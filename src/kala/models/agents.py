@@ -1,9 +1,10 @@
 """Module defining different types of agents"""
 
 from abc import ABC, abstractmethod
+from collections import deque
 from typing import Any, Generic, TypeVar
 
-from kala.models.memory_rules import AverageMemoryRule, MemoryRuleT
+from kala.models.memory_rules import MemoryRuleT
 from kala.models.properties import PropertiesT, SaverProperties
 from kala.models.traits import SaverTraits, TraitsT
 from kala.utils.misc import universally_unique_identifier
@@ -20,6 +21,9 @@ class BaseAgent(
     ----------
     uuid : int | str
         A unique identifier for the agent.
+    update_rule : MemoryRuleT | None
+        The rule used to decide whether the agent should change their saver
+        status depending on the outcome of the previous matches (default is None).
 
     Methods
     -------
@@ -32,25 +36,20 @@ class BaseAgent(
 
     _traits: TraitsT
     _properties: PropertiesT
-    update_rule: MemoryRuleT
     uuid: int | str
+    update_rule: MemoryRuleT | None
 
     def __init__(
         self,
         traits: TraitsT,
         properties: PropertiesT,
+        uuid: int | str,
         update_rule: MemoryRuleT | None = None,
-        uuid: int | str | None = None,
-        rng: int | None = None,
     ) -> None:
         self._traits = traits
         self._properties = properties
-
-        self.update_rule = (
-            AverageMemoryRule() if update_rule is None else update_rule  # type: ignore
-        )
-
-        self.uuid = universally_unique_identifier(rng=rng) if uuid is None else uuid
+        self.uuid = uuid
+        self.update_rule = update_rule
 
     def __hash__(self):
         return hash(self.uuid)
@@ -132,7 +131,6 @@ class InvestorAgent(BaseAgent):
         min_specialization: float = 0.0,
         income_per_period: float = 1.0,
         homophily: float | None = None,
-        updates_from_n_last_games: int = 0,
         update_rule: MemoryRuleT | None = None,
         uuid: int | str | None = None,
         rng: int | None = None,
@@ -152,12 +150,9 @@ class InvestorAgent(BaseAgent):
         homophily : float | None
             The homophily of the agent (default is None), if passed should be a
             number between [0, 1].
-        updates_from_n_last_games : int
-            The number of previous outcomes kept in memory to decide whether to
-            change the saving strategy (default is 0).
         update_rule: MemoryRuleT | None
             The rule used to decide whether the agent should change their saver
-             status depending on the outcome of the previous matches (default is None).
+            status depending on the outcome of the previous matches (default is None).
         uuid : int | str | None
             The unique identifier of the agent (default is None and a random string
             is generated).
@@ -165,18 +160,20 @@ class InvestorAgent(BaseAgent):
             The seed used to initialise random generators (default is None).
         """
 
+        uuid = universally_unique_identifier(rng=rng) if uuid is None else uuid
+
         traits = SaverTraits(
-            is_saver=is_saver,
             group=group,
             min_consumption=0,  # not being used
             min_specialization=min_specialization,
             homophily=homophily,
-            updates_from_n_last_games=updates_from_n_last_games,
         )
 
         props = SaverProperties(
+            is_saver=is_saver,
             savings=0.0,  # all agents initialised with zero savings
             income_per_period=income_per_period,
+            memory=deque([], maxlen=update_rule.memory_length) if update_rule is not None else None,
         )
 
         super().__init__(
@@ -184,29 +181,22 @@ class InvestorAgent(BaseAgent):
             properties=props,
             update_rule=update_rule,
             uuid=uuid,
-            rng=rng,
         )
 
     def update(self, *args, **kwargs) -> None:
-        self._properties.update(*args, **kwargs)
-        self._traits.update(*args, update_rule=self.update_rule, **kwargs)
+        self._properties.update(*args, update_rule=self.update_rule, uuid=self.uuid, **kwargs)
 
     def reset(self) -> None:
         self._properties.reset()
-        self._traits.reset()
 
-    def flip_saver_trait(self) -> None:
-        """Flip the is_saver trait."""
-        self._traits.flip_saver_trait()
-
-    def change_memory_length(self, new_memory_length: int) -> None:
-        "Change the memory length of an agent."
-        self._traits.change_memory_length(new_memory_length)
+    def flip_saver_property(self) -> None:
+        """Flip the is_saver property."""
+        self._properties.flip_saver_property()
 
     def get_savings(self) -> float:
         """Handy direct access to property savings."""
         return self.get_property("savings")
 
     def is_saver(self) -> bool:
-        """Handy direct access to trait is_saver."""
-        return self.get_trait("is_saver")
+        """Handy direct access to property is_saver."""
+        return self.get_property("is_saver")
