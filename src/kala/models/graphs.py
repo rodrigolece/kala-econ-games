@@ -1,7 +1,7 @@
 """Module defining the interface for the underlying graphs."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Sequence, TypeVar, Callable, Iterable
+from typing import Any, Callable, Generic, Iterable, Sequence, TypeVar
 from warnings import warn
 
 import networkx as nx
