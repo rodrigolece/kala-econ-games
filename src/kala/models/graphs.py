@@ -1,7 +1,7 @@
 """Module defining the interface for the underlying graphs."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Sequence, TypeVar
+from typing import Any, Generic, Sequence, TypeVar, Callable, Iterable
 from warnings import warn
 
 import networkx as nx
@@ -29,6 +29,9 @@ class BaseGraph(ABC, Generic[AgentT]):
     remove_edge()
     select_random_node()
     select_random_neighbour()
+    edges()
+    get_property()
+    get_trait()
 
     """
 
@@ -125,7 +128,7 @@ class BaseGraph(ABC, Generic[AgentT]):
         if (hom := node.get_trait("homophily")) is not None:
             saver_trait = node.get_trait("is_saver")
             ps = [hom if n.get_trait("is_saver") == saver_trait else 1 - hom for n in neighs]
-            # the function choice takes care of the normalisation
+            # the `choice` function below takes care of the normalisation
         else:
             ps = None
 
@@ -139,6 +142,22 @@ class BaseGraph(ABC, Generic[AgentT]):
     def select_random_neighbor(self, *args, **kwargs) -> AgentT | None:
         """Alias for the method select_random_neighbour."""
         return self.select_random_neighbour(*args, **kwargs)
+
+    # @abstractmethod
+    # def nodes(fun: Callable | None = None) -> Iterable:
+    #     """Get an iterator on the nodes, optionally calling a function."""
+
+    @abstractmethod
+    def edges(self, fun: Callable | None = None) -> Iterable:
+        """Get an iterator on the edges, optionally calling a function."""
+
+    def get_property(self, property_name: str) -> list[Any]:
+        """Get the values corresponding to a given property of all nodes."""
+        return [n.get_property(property_name) for n in self.get_nodes()]
+
+    def get_trait(self, trait_name: str) -> list[Any]:
+        """Get the node values corresponding to a given trait of all nodes."""
+        return [n.get_trait(trait_name) for n in self.get_nodes()]
 
 
 GraphT = TypeVar("GraphT", bound=BaseGraph)
@@ -241,3 +260,9 @@ class SimpleGraph(BaseGraph, Generic[AgentT]):
             return True
         except nx.NetworkXError:
             return False
+
+    def edges(self, fun: Callable | None = None) -> Iterable:
+        fun = fun or (lambda x: x)
+
+        for e in self._graph.edges:  # NB: this is specific to NetworkX
+            yield fun(e)

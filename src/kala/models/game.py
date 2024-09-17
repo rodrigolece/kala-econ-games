@@ -31,6 +31,7 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
     get_num_players()
     get_total_wealth()
     create_filter_from_property()
+    create_filter_from_trait()
     get_num_savers()
     reset_agents()
 
