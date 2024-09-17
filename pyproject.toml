@@ -1,7 +1,7 @@
 
 [project]
 name = "kala-econ-games"
-version = "0.1.1"
+version = "0.1.2"
 authors = [
     { name = "Rodrigo L.C.", email = "rodrigolealc@ciencias.unam.mx" },
     { name = "Leonardo C.G.", email = "lmcastrogonzalez@turing.ac.uk" },
