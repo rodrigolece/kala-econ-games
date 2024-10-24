@@ -58,16 +58,16 @@ class CooperationStrategy(BaseStrategy):
 
     """
 
+    _mean: Mapping[tuple[str, ...], float]
     _sigma: Mapping[tuple[str, ...], float]
 
     # pylint: disable=unused-argument
     def __init__(
         self,
         *args,
-        stochastic: bool = False,
+        stochastic: bool = True,
         differential_inefficient: float = 0.1,
         differential_efficient: float = 0.15,
-        dist_mean: float = 0.0,
         dist_sigma_func: Callable = lambda x: x,
         rng: Generator | int | None = None,
         **kwargs,
@@ -78,16 +78,13 @@ class CooperationStrategy(BaseStrategy):
         Parameters
         ----------
         stochastic : bool, optional
-            Whether to use a stochastic payoff matrix, by default False.
+            Whether to use a stochastic payoff matrix, by default True.
         differential_inefficient : float, optional
             The amount by which a saver is less efficient when encountering non-savers,
             by default 0.1.
         differential_efficient : float, optional
             The amount by which a saver is more efficient when encountering another saver,
             by default 0.15.
-        dist_mean : float, optional
-            The mean of the lognormal distribution used to generate stochastic payoffs,
-            by default 1.0.
         dist_sigma_func : Callable, optional
             A function that maps specializations (efficient and inefficient) to the
             standard deviation of the lognormal distribution. By default, the function
@@ -124,16 +121,26 @@ class CooperationStrategy(BaseStrategy):
         self._saver_encoding = {True: "saver", False: "non-saver"}
         # used to map the trait is_saver to the payoff matrix entries
 
-        self._rng = get_random_state(rng)
-        self._mean = dist_mean
-        self._sigma = {
-            ("saver", "saver"): dist_sigma_func(payoff_ss),
-            ("saver", "non-saver"): dist_sigma_func(payoff_sn),
-            ("non-saver", "saver"): dist_sigma_func(payoff_sn),
-            ("non-saver", "non-saver"): 1,
+        # The log-normal mean and variance to ensure RV with mean 1 and var_ss (sn)
+        var_ss = dist_sigma_func(payoff_ss)
+        var_sn = dist_sigma_func(payoff_sn)
+
+        self._mean = {
+            ("saver", "saver"): -0.5 * np.log(1 + var_ss),
+            ("saver", "non-saver"): -0.5 * np.log(1 + var_sn),
+            ("non-saver", "saver"): -0.5 * np.log(1 + var_sn),
+            ("non-saver", "non-saver"): 1,  # dummy (ignored) value
         }
-        # TODO: more elegant solution would be to accept initialized distribution that
-        # doesn't need parameters and is ready to return random numbers
+        self._sigma = {
+            ("saver", "saver"): np.sqrt(np.log(1 + var_ss)),
+            ("saver", "non-saver"): np.sqrt(np.log(1 + var_sn)),
+            ("non-saver", "saver"): np.sqrt(np.log(1 + var_sn)),
+            ("non-saver", "non-saver"): 1,  # dummy (ignored) value
+        }
+        # TODO: more elegant solution would be to accept initialized distributions that
+        # don't need parameters and are ready to return random numbers
+
+        self._rng = get_random_state(rng)
 
     # pylint: disable=arguments-differ
     def calculate_payoff(
@@ -148,8 +155,12 @@ class CooperationStrategy(BaseStrategy):
         payoffs = np.asarray(self.payoff_matrix[saver_traits])
 
         if self.stochastic:
-            sigma = self._sigma[saver_traits]
-            draw = lognormal(mean=self._mean, sigma=sigma, rng=self._rng)
+            draw = lognormal(
+                mean=self._mean[saver_traits],
+                sigma=self._sigma[saver_traits],
+                rng=self._rng,
+            )
+            # below ignores the dummy draw for (non-saver, non-saver)
             payoffs *= [draw if ag.is_saver() else 1 for ag in agents]
 
         return tuple(payoffs)
