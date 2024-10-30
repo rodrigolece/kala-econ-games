@@ -154,7 +154,8 @@ class CooperationStrategy(BaseStrategy):
             raise ValueError("expected exactly two agents")
 
         saver_traits = tuple(self._saver_encoding[ag.is_saver()] for ag in agents)
-        payoffs = np.asarray(self.payoff_matrix[saver_traits])
+        specs = np.asarray([ag.get_trait("min_specialization") for ag in agents])
+        payoffs = np.asarray(self.payoff_matrix[saver_traits]) + specs
 
         if self.stochastic:
             draw = lognormal(mean=0, sigma=self._sigma[saver_traits], rng=self._rng)
