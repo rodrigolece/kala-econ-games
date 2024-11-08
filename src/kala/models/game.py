@@ -30,6 +30,7 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
     play_round()
     get_num_players()
     get_total_wealth()
+    get_gini()
     create_filter_from_property()
     create_filter_from_trait()
     get_num_savers()
@@ -117,6 +118,42 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
             out += player.get_property("savings")
 
         return out
+
+    def get_gini(self, filt: Sequence[bool] | None = None) -> float:
+        """
+        Calculate the Gini coefficient given the present distribution of savings.
+
+        Parameters
+        ----------
+        filt : Sequence[bool], optional
+            A sequence of booleans to keep a subset of the players.
+
+        Returns
+        -------
+        float
+
+        """
+        if filt is not None:
+            assert len(filt) == self.get_num_players(), "'filt' must be the same length as players"
+
+        players = (
+            itertools.compress(self._get_players(), filt)
+            if filt is not None
+            else self._get_players()
+        )
+        savings = sorted(p.get_savings() for p in players)
+
+        total_wealth = sum(savings)
+        if np.isclose(total_wealth, 0):
+            return 0.0
+
+        N = len(savings)
+        cumsum = np.cumsum(savings) / total_wealth
+        triangles = np.array([cumsum[i + 1] - cumsum[i] for i in range(N - 1)])
+        step = 1 / (N - 1)
+
+        area = sum(step * triangles / 2) + sum(step * cumsum[:-1])
+        return 1 - 2 * area
 
     def create_filter_from_trait(self, trait_name: str, trait_value: Any = True) -> list[bool]:
         """
