@@ -68,7 +68,7 @@ class WeightedMemoryRule(BaseMemoryRule):
         n = self.memory_length  # pylint: disable=invalid-name
         if len(self.weights) != n:
             raise ValueError(f"expected length of {n} for 'weights', observed {len(self.weights)}")
-        return len(memory) == n and np.average(memory, weights=self.weights) < self.fraction
+        return len(memory) == n and np.average(memory, weights=self.weights) >= self.fraction
 
 
 class FractionMemoryRule(BaseMemoryRule):
@@ -91,12 +91,13 @@ class FractionMemoryRule(BaseMemoryRule):
         if len(memory) != n:
             return False
 
-        if self.fraction == 0:
-            # NB: we add this condition so that FractionMemoryRule(fraction=0)
-            # is equivalent to AllPastMemoryRule
-            return sum(memory) == 0
+        # TODO: delete
+        # if np.isclose(self.fraction, 1):
+        #     # NB: we add this condition so that FractionMemoryRule(fraction=1)
+        #     # is equivalent to AllPastMemoryRule
+        #     return sum(memory) == n
 
-        return sum(memory) < n * self.fraction
+        return sum(memory) >= n * self.fraction
 
 
 class AverageMemoryRule(BaseMemoryRule):
@@ -113,7 +114,7 @@ class AverageMemoryRule(BaseMemoryRule):
 
     def should_update(self, memory: deque) -> bool:
         n = self.memory_length  # pylint: disable=invalid-name
-        return len(memory) == n and sum(memory) < n * self.fraction
+        return len(memory) == n and sum(memory) >= n * self.fraction
 
 
 class AllPastMemoryRule(BaseMemoryRule):
@@ -126,7 +127,7 @@ class AllPastMemoryRule(BaseMemoryRule):
         self.name = "All Past Memory Rule"
 
     def should_update(self, memory: deque) -> bool:
-        return len(memory) == self.memory_length and sum(memory) == 0
+        return sum(memory) == self.memory_length  # len(memory) == self.memory_length
 
 
 class AnyPastMemoryRule(BaseMemoryRule):
@@ -140,4 +141,4 @@ class AnyPastMemoryRule(BaseMemoryRule):
 
     def should_update(self, memory: deque) -> bool:
         n = self.memory_length  # pylint: disable=invalid-name
-        return len(memory) == n and sum(memory) < n
+        return len(memory) == n and sum(memory) > 0

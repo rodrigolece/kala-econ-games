@@ -33,6 +33,14 @@ def saver_memoried_properties():
     )
 
 
+@pytest.fixture()
+def non_saver_memoried_properties():
+    """Non-saver properties with memory"""
+    return SaverProperties(
+        is_saver=False, savings=0, income_per_period=1, memory=deque([], maxlen=NUM_GAMES)
+    )
+
+
 def test_init_and_conversion_to_dict(simple_saver_properties):
     """Test init and .to_dict() method."""
 
@@ -54,11 +62,23 @@ def test_memory_property(saver_memoried_properties):
     sp = saver_memoried_properties
     rule = AverageMemoryRule(memory_length=NUM_GAMES)
     # normally the memory would hold booleans but below we test the values contained
-    sp.update(successful_round=1, update_rule=rule)
-    sp.update(successful_round=2, update_rule=rule)
-    sp.update(successful_round=3, update_rule=rule)  # this should push out the first value
-    assert list(sp.memory) == [2, 3]  # type: ignore
+    sp.update(match_lost=-1, update_rule=rule)
+    sp.update(match_lost=-2, update_rule=rule)
+    sp.update(match_lost=-3, update_rule=rule)  # this should push out the first value
+    assert list(sp.memory) == [-2, -3]  # type: ignore
 
-    sp.update(successful_round=False, update_rule=rule)
-    sp.update(successful_round=False, update_rule=rule)
+
+def test_saver_flip(saver_memoried_properties):
+    sp = saver_memoried_properties
+    rule = AverageMemoryRule(memory_length=NUM_GAMES)
+    sp.update(match_lost=True, update_rule=rule)
+    sp.update(match_lost=False, update_rule=rule)
     assert not sp.is_saver
+
+
+def test_non_saver_flip(non_saver_memoried_properties):
+    sp = non_saver_memoried_properties
+    rule = AverageMemoryRule(memory_length=NUM_GAMES)
+    sp.update(match_lost=True, update_rule=rule)
+    sp.update(match_lost=False, update_rule=rule)
+    assert sp.is_saver
