@@ -83,14 +83,14 @@ class SaverProperties(BaseProperties):
             return
 
         # Check if the update_rule for the memory holds
-        if (successful_round := kwargs.get("successful_round", None)) is None:
-            raise ValueError("expected 'successful_round' keyword argument")
+        if (match_lost := kwargs.get("match_lost", None)) is None:
+            raise ValueError("expected 'match_lost' keyword argument")
 
         if (update_rule := kwargs.get("update_rule", None)) is None:
             raise ValueError("expected 'update_rule' keyword argument")
 
         memory: deque = self.memory  # type: ignore
-        memory.append(successful_round)
+        memory.append(match_lost)
 
         if update_rule.should_update(memory):
             if DEBUG:

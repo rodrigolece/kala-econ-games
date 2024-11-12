@@ -43,5 +43,5 @@ def test_init_of_memoried_agent(memoried_investor_agent):
     expected_states = np.hstack((a, ~a))
 
     for i in range(2 * NUM_GAMES):
-        agent.update(payoff=1.0, successful_round=False)
+        agent.update(payoff=1.0, match_lost=True)
         assert agent.is_saver() == expected_states[i]
