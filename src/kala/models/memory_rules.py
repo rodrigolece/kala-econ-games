@@ -91,11 +91,10 @@ class FractionMemoryRule(BaseMemoryRule):
         if len(memory) != n:
             return False
 
-        # TODO: delete
-        # if np.isclose(self.fraction, 1):
-        #     # NB: we add this condition so that FractionMemoryRule(fraction=1)
-        #     # is equivalent to AllPastMemoryRule
-        #     return sum(memory) == n
+        if self.fraction == 0:
+            # NB: we add this condition so that FractionMemoryRule(fraction=0)
+            # is equivalent to AnyPastMemoryRule
+            return sum(memory) > 0
 
         return sum(memory) >= n * self.fraction
 

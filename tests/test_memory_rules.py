@@ -21,6 +21,11 @@ def test_fraction_memory_rule():
     assert not rule.should_update([True, True, True, False])
     assert rule.should_update([True, True, True, True])
 
+    rule = FractionMemoryRule(memory_length=2, fraction=0.0)
+    assert not rule.should_update([True])
+    assert not rule.should_update([False, False])
+    assert rule.should_update([True, False])
+
 
 def test_all_past_memory_rule():
     rule = AllPastMemoryRule(memory_length=4)
