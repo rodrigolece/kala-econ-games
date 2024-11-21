@@ -8,3 +8,6 @@ LOG_TAG: str | None = None
 
 LOG_LEVEL: str = "DEBUG"
 """The logging level"""
+
+NUM_POOL_WORKERS = 12
+"""Number of workers for multiprocessing.Pool"""

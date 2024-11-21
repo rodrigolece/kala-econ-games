@@ -2,6 +2,7 @@
 
 import itertools
 from abc import ABC, abstractmethod
+from multiprocessing import Pool
 from typing import Any, Generic, Sequence, TypeVar
 
 import numpy as np
@@ -9,6 +10,7 @@ from numpy.random import Generator
 
 from kala.models.graphs import GraphT
 from kala.models.strategies import StrategyT
+from kala.settings.consts import NUM_POOL_WORKERS
 
 
 class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
@@ -75,18 +77,35 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
         """Return a pair of matched opponents."""
 
     # pylint: disable=unused-argument
+    def _get_match_outcome(self, *args, **kwargs) -> list[tuple] | None:
+        if (players := self.match_opponents(**kwargs)) is not None:
+            ids = (agent.uuid for agent in players)
+            payoffs = self.strategy.calculate_payoff(*players, **kwargs)
+            achieved_min_payoff = np.array(payoffs) < max(payoffs)
+            return list(zip(ids, payoffs, achieved_min_payoff))
+
+            # NB: below doesn't work bcs agent is pickled and copied inside multiprocessing
+            # and therefore a direct call to .update() changes a copy of the agent
+            # for agent, pay, outcome in zip(players, payoffs, achieved_min_payoff):
+            #     agent.update(payoff=pay, match_lost=outcome)
+
+        return None
+
+    # pylint: disable=unused-argument
     def play_round(self, *args, **kwargs) -> None:
         """Match two opponents and advance the time."""
         if (rng := kwargs.get("rng", None)) is not None:
             kwargs["rng"] = np.random.default_rng(rng)
 
-        for _ in range(self.get_num_players() // 2):
-            if (players := self.match_opponents(**kwargs)) is not None:
-                payoffs = self.strategy.calculate_payoff(*players, **kwargs)
-                achieved_min_payoff = np.array(payoffs) < max(payoffs)
+        num_matches = self.get_num_players() // 2
+        empty_iterables = [[]] * num_matches  # type: ignore
 
-                for agent, pay, outcome in zip(players, payoffs, achieved_min_payoff):
-                    agent.update(payoff=pay, match_lost=outcome)
+        with Pool(min(NUM_POOL_WORKERS, num_matches)) as p:
+            iterables = p.starmap(self._get_match_outcome, empty_iterables)
+            filtered = filter(None, iterables)  # filter unmatched
+            for uuid, pay, outcome in itertools.chain(*filtered):  # flattens _get_match_outcome
+                # TODO: possible that not passing **kwargs breaks homophily; investigate
+                self.graph.get_node(uuid).update(payoff=pay, match_lost=outcome)
 
         self.time += 1
 
