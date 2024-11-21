@@ -8,7 +8,7 @@ import networkx as nx
 import numpy as np
 from numpy.random import Generator
 
-from kala.models.agents import AgentT
+from kala.models.agents import AgentT, InvestorAgent
 from kala.utils.stats import choice
 
 
@@ -266,3 +266,19 @@ class SimpleGraph(BaseGraph, Generic[AgentT]):
 
         for e in self._graph.edges:  # NB: this is specific to NetworkX
             yield fun(e)
+
+
+def init_investor_graph(
+    nx_graph: nx.Graph,
+    savers_share: float = 0.5,
+    rng: np.random.Generator | int | None = None,
+    **agent_init_kwargs,
+):
+    rng = np.random.default_rng(rng)
+    num_players = nx_graph.number_of_nodes()
+    ps = [savers_share, 1 - savers_share]
+
+    is_saver = rng.choice([True, False], num_players, p=ps)
+    nodes = [InvestorAgent(is_saver=bool(s), **agent_init_kwargs) for s in is_saver]
+
+    return SimpleGraph(nx_graph, nodes)

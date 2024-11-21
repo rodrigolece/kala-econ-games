@@ -83,8 +83,8 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
 
         for _ in range(self.get_num_players() // 2):
             if (players := self.match_opponents(**kwargs)) is not None:
-                payoffs = self.strategy.calculate_payoff(*players, **kwargs)
-                achieved_min_payoff = np.array(payoffs) < max(payoffs)
+                payoffs = np.array(self.strategy.calculate_payoff(*players, **kwargs))
+                achieved_min_payoff = payoffs < payoffs.max()
 
                 for agent, pay, outcome in zip(players, payoffs, achieved_min_payoff):
                     agent.update(payoff=pay, match_lost=outcome)
