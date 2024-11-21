@@ -167,3 +167,7 @@ cython_debug/
 
 # pdm
 .pdm-python
+
+
+# project-based
+src/kala/utils/io/cache/
