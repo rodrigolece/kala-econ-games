@@ -19,6 +19,8 @@ def get_random_state(rng: Generator | int | None = None):
         rng = np.random.default_rng(rng)
     elif isinstance(rng, Generator):
         pass
+    else:
+        raise ValueError("invalid type")
 
     return rng
 
