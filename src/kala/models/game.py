@@ -5,10 +5,10 @@ from abc import ABC, abstractmethod
 from typing import Any, Generic, Sequence, TypeVar
 
 import numpy as np
-from numpy.random import Generator
 
 from kala.models.graphs import GraphT
 from kala.models.strategies import StrategyT
+from kala.utils.stats import get_random_state
 
 
 class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
@@ -26,7 +26,6 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
 
     Methods
     -------
-    match_opponents()
     play_round()
     get_num_players()
     get_total_wealth()
@@ -71,24 +70,8 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
         return self.graph.num_nodes()
 
     @abstractmethod
-    def match_opponents(self, rng: Generator | int | None = None, **kwargs) -> tuple | None:
-        """Return a pair of matched opponents."""
-
-    # pylint: disable=unused-argument
     def play_round(self, *args, **kwargs) -> None:
-        """Match two opponents and advance the time."""
-        if (rng := kwargs.get("rng", None)) is not None:
-            kwargs["rng"] = np.random.default_rng(rng)
-
-        for _ in range(self.get_num_players() // 2):
-            if (players := self.match_opponents(**kwargs)) is not None:
-                payoffs = self.strategy.calculate_payoff(*players, **kwargs)
-                achieved_min_payoff = np.array(payoffs) < max(payoffs)
-
-                for agent, pay, outcome in zip(players, payoffs, achieved_min_payoff):
-                    agent.update(payoff=pay, match_lost=outcome)
-
-        self.time += 1
+        """Match pairs of agents and advance the time."""
 
     def get_total_wealth(self, filt: Sequence[bool] | None = None) -> float:
         """
@@ -183,11 +166,22 @@ class DiscreteTwoByTwoGame(DiscreteBaseGame):
 
     """
 
-    def match_opponents(self, rng: Generator | int | None = None, **kwargs) -> tuple | None:
-        player = self.graph.select_random_node(rng=rng)
-        opponent = self.graph.select_random_neighbour(player, rng=rng)
-        if opponent is None:
-            return None
+    # pylint: disable=unused-argument
+    def play_round(self, *args, **kwargs) -> None:
+        rng = get_random_state(kwargs.get("rng", None))
 
-        # print(f"{p.uuid} ({p.get_trait('is_saver')}) - {o.uuid} ({o.get_trait('is_saver')})")
-        return player, opponent
+        players = self.graph.get_nodes()
+        selection = rng.choice(players, size=(len(players) // 2))
+
+        for player in selection:
+            opponent = self.graph.select_random_neighbour(player, rng=rng)
+            if opponent is None:
+                continue
+
+            payoffs = np.array(self.strategy.calculate_payoff(player, opponent, **kwargs))
+            achieved_min_payoff = payoffs < payoffs.max()
+
+            for agent, pay, outcome in zip((player, opponent), payoffs, achieved_min_payoff):
+                agent.update(payoff=pay, match_lost=outcome)
+
+        self.time += 1
