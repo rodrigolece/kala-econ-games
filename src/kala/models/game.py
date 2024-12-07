@@ -30,6 +30,8 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
     play_round()
     get_num_players()
     get_total_wealth()
+    get_gini()
+    create_filter_from_property()
     create_filter_from_trait()
     get_num_savers()
     reset_agents()
@@ -81,11 +83,11 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
 
         for _ in range(self.get_num_players() // 2):
             if (players := self.match_opponents(**kwargs)) is not None:
-                payoffs = self.strategy.calculate_payoff(*players, **kwargs)
-                achieved_max_payoff = np.array(payoffs) == max(payoffs)
+                payoffs = np.array(self.strategy.calculate_payoff(*players, **kwargs))
+                achieved_min_payoff = payoffs < payoffs.max()
 
-                for agent, pay, success in zip(players, payoffs, achieved_max_payoff):
-                    agent.update(payoff=pay, successful_round=success)
+                for agent, pay, outcome in zip(players, payoffs, achieved_min_payoff):
+                    agent.update(payoff=pay, match_lost=outcome)
 
         self.time += 1
 
@@ -117,6 +119,42 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
 
         return out
 
+    def get_gini(self, filt: Sequence[bool] | None = None) -> float:
+        """
+        Calculate the Gini coefficient given the present distribution of savings.
+
+        Parameters
+        ----------
+        filt : Sequence[bool], optional
+            A sequence of booleans to keep a subset of the players.
+
+        Returns
+        -------
+        float
+
+        """
+        if filt is not None:
+            assert len(filt) == self.get_num_players(), "'filt' must be the same length as players"
+
+        players = (
+            itertools.compress(self._get_players(), filt)
+            if filt is not None
+            else self._get_players()
+        )
+        savings = sorted(p.get_savings() for p in players)
+
+        total_wealth = sum(savings)
+        if np.isclose(total_wealth, 0):
+            return 0.0
+
+        N = len(savings)
+        cumsum = np.cumsum(savings) / total_wealth
+        triangles = np.array([cumsum[i + 1] - cumsum[i] for i in range(N - 1)])
+        step = 1 / (N - 1)
+
+        area = sum(step * triangles / 2) + sum(step * cumsum[:-1])
+        return 1 - 2 * area
+
     def create_filter_from_trait(self, trait_name: str, trait_value: Any = True) -> list[bool]:
         """
         Create a filter from a trait name and value.
@@ -136,6 +174,25 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
         """
         return [player.get_trait(trait_name) == trait_value for player in self._get_players()]
 
+    def create_filter_from_property(self, prop_name: str, prop_value: Any = True) -> list[bool]:
+        """
+        Create a filter from a property name and value.
+
+        Parameters
+        ----------
+        prop_name : str
+            The name of the property.
+        prop_value : Any, optional
+            The value of the property, by default True ('is_saver', which would be the primary use
+            case, is a boolean).
+
+        Returns
+        -------
+        list[bool]
+
+        """
+        return [player.get_property(prop_name) == prop_value for player in self._get_players()]
+
     def get_num_savers(self) -> int:
         """
         Return the number of savers.
@@ -145,7 +202,7 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
         int
 
         """
-        return sum(self.create_filter_from_trait("is_saver"))
+        return sum(self.create_filter_from_property("is_saver"))
 
     def reset_agents(self) -> None:
         """Reset the savings of agents to their initial state."""

@@ -1,8 +1,11 @@
 """Module defining agent (and possibly other types of actors) properties"""
 
 from abc import ABC, abstractmethod
+from collections import deque
 from dataclasses import asdict, dataclass
 from typing import Any, TypeVar
+
+from kala.utils.config import DEBUG
 
 
 @dataclass
@@ -56,16 +59,54 @@ class SaverProperties(BaseProperties):
 
     Attributes
     ----------
+    is_saver: bool
     income_per_period : float
     savings : float
+    memory: deque | None
 
     """
 
+    is_saver: bool
     savings: float
     income_per_period: float
+    memory: deque | None = None
 
-    def update(self, *args, payoff: float = 1.0, **kwargs) -> None:
+    # pylint: disable=unused-argument
+    def update(self, *args, **kwargs) -> None:
+        """Update the savings and the is_saver attribute depending on the update_rule and memory."""
+
+        # Update the savings
+        payoff = kwargs.get("payoff", 0.0)
         self.savings += self.income_per_period * payoff
 
+        if self.memory is None:
+            return
+
+        # Check if the update_rule for the memory holds
+        if (match_lost := kwargs.get("match_lost", None)) is None:
+            raise ValueError("expected 'match_lost' keyword argument")
+
+        if (update_rule := kwargs.get("update_rule", None)) is None:
+            raise ValueError("expected 'update_rule' keyword argument")
+
+        memory: deque = self.memory  # type: ignore
+        memory.append(match_lost)
+
+        if update_rule.should_update(memory):
+            if DEBUG:
+                user_str = f"{uuid} " if (uuid := kwargs.get("uuid", None)) else ""
+                print(f"{user_str}is flipping: {self.is_saver}->{not self.is_saver}")
+
+            self.flip_saver_property()
+            self.memory = deque([], maxlen=memory.maxlen)
+
+    def flip_saver_property(self) -> None:
+        """Flip the is_saver property."""
+        self.is_saver = not self.is_saver
+
     def reset(self) -> None:
+        """Reset the SaverProperties to their initial values"""
         self.savings = 0.0
+
+        if self.memory is not None:
+            self.memory = deque([], maxlen=self.memory.maxlen)
