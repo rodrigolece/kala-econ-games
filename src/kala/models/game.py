@@ -13,7 +13,7 @@ from kala.models.strategies import StrategyT
 
 class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
     """
-    Base game meant to be subclassed.
+    Base game meant to be subclassed.x
 
     Attributes
     ----------
