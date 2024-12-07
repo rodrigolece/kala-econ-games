@@ -149,11 +149,12 @@ class DiscreteBaseGame(ABC, Generic[GraphT, StrategyT]):
 
         N = len(savings)
         cumsum = np.cumsum(savings) / total_wealth
-        triangles = np.array([cumsum[i + 1] - cumsum[i] for i in range(N - 1)])
-        step = 1 / (N - 1)
+        # triangles = np.array([cumsum[i + 1] - cumsum[i] for i in range(N - 1)])
+        # step = 1 / (N - 1)
 
-        area = sum(step * triangles / 2) + sum(step * cumsum[:-1])
-        return 1 - 2 * area
+        # area = sum(step * triangles / 2) + sum(step * cumsum[:-1])
+        gini = (N + 1 - 2 * np.sum(cumsum)) / N
+        return gini
 
     def create_filter_from_trait(self, trait_name: str, trait_value: Any = True) -> list[bool]:
         """
