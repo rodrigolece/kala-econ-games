@@ -20,4 +20,7 @@ fix-all: fix-format fix-linter
 test:
     uv run pytest tests
 
+preview-readme:
+    uv run grip -b
+
 default: fix-all check-all test
