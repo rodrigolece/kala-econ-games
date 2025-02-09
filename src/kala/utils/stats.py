@@ -10,7 +10,7 @@ from statsmodels.tsa.stattools import adfuller
 # from scipy.special import erf  # pylint: disable=no-name-in-module
 
 
-def get_random_state(rng: Generator | int | None = None):
+def get_random_state(rng: Generator | int | None = None) -> Generator:
     """If rng is already a Generator, pass-through; otherwise return default."""
 
     if rng is None:
@@ -34,8 +34,9 @@ def choice(
 ):
     rng = get_random_state(rng)
 
+    p_arr: np.ndarray | None
     if p is not None:
-        p_arr: np.ndarray = np.asarray(p)
+        p_arr = np.asarray(p)
         mass = p_arr.sum()
 
         if len(p_arr) != len(lst):
@@ -85,7 +86,7 @@ def normal_truncated(
 
 
 def multivariate_normal(
-    mean: Sequence[float],
+    mean: Sequence[float] | np.ndarray,
     var: Sequence[float] | None = None,
     cov: np.ndarray | None = None,
     size: int | None = None,
@@ -106,6 +107,9 @@ def multivariate_normal(
 
     elif cov is not None:
         cov = np.asarray(cov)
+
+    if cov is None:
+        raise ValueError("Either var or cov must be provided.")
 
     return rng.multivariate_normal(mean, cov, size=size)
 
