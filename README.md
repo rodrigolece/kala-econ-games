@@ -9,7 +9,37 @@ To begin with, we have used the framework to coded the model presented in *Ernst
 
 ## Installation
 
-The package is written in Python (minimal version: 3.10). We recommend that the installation is made inside a virtual environment and to do this, one can use either `conda` (recommended in order to control the Python version) or the Python builtin `venv` (if the system's version of Python is compatible).
+The package is written in Python (minimal version: 3.10).
+We recommend that the installation is made inside a virtual environment.
+While you can use `conda` or Python's built-in `venv`, we recommend `uv` ([https://docs.astral.sh/uv/](https://docs.astral.sh/uv/)).
+
+### Install using `uv`
+
+If you don't have `uv` installed, follow the instructions on their [documentation](https://docs.astral.sh/uv/getting-started/installation/).
+Once `uv` is installed, navigate to the project's root directory and run:
+
+```bash
+$ uv sync
+```
+
+This command creates a virtual environment in the `.venv` directory and installs all project dependencies.
+
+You have two options for using the virtual environment:
+
+1. Activate the environment using:
+
+```bash
+$ source .venv/bin/activate
+```
+
+2. Execute scripts or programs directly within the virtual environment by prefixing your commands with `uv run`:
+
+```bash
+$ uv run python my_script.py
+$ uv run pytest tests/
+```
+
+For more information on using uv, please refer to the [official documentation](https://docs.astral.sh/uv/).
 
 ### Create a virtual environment using Python's builtin `venv`
 
@@ -182,15 +212,60 @@ In order to implement the models \[**Ernst04**\], we use `DiscreteTwoByTwoGame`.
 
 ## Contributing
 
-The package has a couple of utilities (linters, formatters, etc.) that automatically run checks and help correct simple problems.
+### Development Environment
 
-To run on new contributions, use
+The package uses several tools (linters, formatters, etc.) that automatically run checks and help correct simple problems.
+The recommended way to set up your development environment is using `uv`.
+
+To install all development tools and the package, run
 
 ```bash
-$ pre-commit run --all-files
+$ uv sync --dev
 ```
 
-You might find it useful to create an alias, for example `alias pcr='pre-commit run --all-files`.
+We use [`just`](https://just.systems/man/en/) to manage common development tasks like linting, formatting, and testing.
+With `uv` installed, the easiest way to install `just` is via the command
+
+```
+$ uv tool install rust-just
+```
+
+Once installed, to see all available commands run
+
+```bash
+$ just --list
+```
+
+### Contributing with code
+
+When contributing code, please create a new branch with a descriptive name, such as `feat/add-super-custom-agent`.
+
+Once you're ready, create a pull request.
+We have automated checks that run on every pull request.
+Your code _must_ pass these checks before it can be merged.
+If the checks fail, update your code and push the changes to re-trigger the checks.
+We also recommend requesting a code review from another maintainer before merging.
+
+Before submitting a pull request, it's highly recommended to run the checks locally to catch any issues early.
+Run the following command to execute all checks:
+
+```bash
+$ just
+```
+
+You can format the code automatically by running
+
+```bash
+$ just format-all
+```
+
+Or only run the test suite with
+
+```bash
+just test
+```
+
+If the `just` command passes locally, it's highly likely that the automated CI/CD pipeline on GitHub will also pass.
 
 
 ### Extending the existing models
