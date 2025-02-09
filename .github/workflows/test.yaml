@@ -26,6 +26,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set-up just runner
+        uses: extractions/setup-just@v2
+
       - name: Install uv and set the python version
         uses: astral-sh/setup-uv@v5
         with:
@@ -36,5 +39,14 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --dev
 
-      - name: Run pre-commit hooks
-        run: uv run pre-commit
+      - name: Check format
+        run: just check-format
+
+      - name: Run linter
+        run: just check-linter
+
+      - name: Run type checker
+        run: just check-types
+
+      - name: Run tests
+        run: just test
