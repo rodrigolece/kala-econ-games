@@ -1,4 +1,5 @@
 """Miscellaneous utilities."""
+
 import random
 import string
 
