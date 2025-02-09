@@ -13,7 +13,7 @@ The package is written in Python (minimal version: 3.10).
 We recommend that the installation is made inside a virtual environment.
 While you can use `conda` or Python's built-in `venv`, we recommend `uv` ([https://docs.astral.sh/uv/](https://docs.astral.sh/uv/)).
 
-### Install using `uv`
+### Using `uv` (recommended)
 
 If you don't have `uv` installed, follow the instructions on their [documentation](https://docs.astral.sh/uv/getting-started/installation/).
 Once `uv` is installed, navigate to the project's root directory and run:
@@ -39,9 +39,9 @@ $ uv run python my_script.py
 $ uv run pytest tests/
 ```
 
-For more information on using uv, please refer to the [official documentation](https://docs.astral.sh/uv/).
+For more information on using `uv`, please refer to the [official documentation](https://docs.astral.sh/uv/).
 
-### Create a virtual environment using Python's builtin `venv`
+### Using Python's builtin `venv`
 
 The first step is running
 
@@ -51,12 +51,11 @@ $ python -m venv kala
 
 This creates a folder that contains the virtual environment `kala` (a different name can be used; change below as appropriate). We activate it using
 
-
 ```bash
 $ source kala/bin/activate
 ```
 
-### Using conda (recommended)
+### Using conda
 
 The tool `conda`, which comes bundled with Anaconda has the advantage that it lets us specify the version of Python that we want to use. Python>=3.10 is required.
 
