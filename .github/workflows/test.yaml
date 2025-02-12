@@ -27,7 +27,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
-    if: github.event_name == 'push' || matrix.run-job == true
+    if: ${{ github.event_name }} == 'push' || ${{ matrix.run-job }} == true
 
     steps:
       - uses: actions/checkout@v4
