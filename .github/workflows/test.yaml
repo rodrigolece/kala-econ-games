@@ -20,14 +20,8 @@ jobs:
           - ubuntu-latest
           - windows-latest
           - macos-latest
-        include:
-          - python-version: "3.12"
-            os: "ubuntu-latest"
-            run-job: true # Custom flag for conditional execution
 
     runs-on: ${{ matrix.os }}
-
-    if: ${{ github.event_name }} == 'push' || ${{ matrix.run-job }} == true
 
     steps:
       - uses: actions/checkout@v4
