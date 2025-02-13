@@ -1,4 +1,5 @@
 """Configurations"""
+
 import logging
 import sys
 
