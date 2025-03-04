@@ -1,282 +1,149 @@
 """Module defining the interface for the underlying graphs."""
 
-from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, Iterable, Sequence, TypeVar
-from warnings import warn
+import warnings
+from typing import Generator, Hashable, Mapping, Protocol
 
 import networkx as nx
 import numpy as np
-from numpy.random import Generator
 
-from kala.models.agents import AgentT, InvestorAgent
-from kala.utils.stats import choice
+from kala.models.agents import Agent, SaverAgent
+
+NodeID = Hashable
 
 
-class BaseGraph(ABC, Generic[AgentT]):
+class AgentPlacement(Protocol):
+    """Top-level protocol defining a placement of agents on top of nodes."""
+
+    def clear_node(self, position: NodeID) -> None:
+        """Remove agent from node if present."""
+
+    def add_agent(self, agent: Agent, position: NodeID) -> None:
+        """Place an agent at a given node position."""
+
+    def get_position(self, agent: Agent) -> NodeID | None:
+        """Locate a given agent and return its node position."""
+
+    def get_agent(self, position: NodeID) -> Agent | None:
+        """Get the agent (if any) located at the given position."""
+
+    def __iter__(self) -> Generator[tuple[NodeID, Agent], None, None]: ...
+
+
+class AgentPlacementNetX(AgentPlacement):
     """
-    Our graph interface independent of the library used for implementation.
+    An implementation of the AgentPlacement protocol for NetworkX.
 
-    Methods
+    It is assumed that nodes in the graph can remain empty, but only a single agent
+    can be located at a particular node at any given moment.
+
+    """
+
+    _mapping: Mapping[NodeID, Agent | None]
+
+    def __init__(self):
+        self._mapping = {}
+
+    def clear_node(self, position: NodeID) -> None:
+        del self._mapping[position]
+
+    def add_agent(self, agent: Agent, position: NodeID) -> None:
+        if self._mapping.get(position) is None:
+            self._mapping[position] = agent
+        else:
+            raise ValueError("node position is not empty")
+
+    def get_position(self, agent: Agent) -> NodeID | None:
+        for k, v in self._mapping.items():
+            if agent.uuid == v.uuid:
+                return k
+        return None
+
+    def get_agent(self, position: NodeID) -> Agent | None:
+        return self._mapping.get(position, None)
+
+    def __iter__(self) -> Generator[tuple[NodeID, Agent], None, None]:
+        for k, v in self._mapping.items():
+            yield (k, v)
+
+    @classmethod
+    def init_bijection(cls, agents: list[Agent], graph: nx.Graph):
+        """
+        Initialise a new placement from a list of agents and a graph with the same size.
+        """
+
+        if graph.number_of_nodes() != len(agents):
+            raise ValueError("expected matching number of nodes and agents")
+
+        placement = cls()
+        for agent, position in zip(agents, graph):
+            placement.add_agent(agent, position)
+
+        return placement
+
+
+def get_neighbours(
+    agent: Agent,
+    graph: nx.Graph,
+    placements: AgentPlacement,
+) -> list[Agent] | None:
+    """
+
+    Returns
     -------
-    get_node()
-    get_nodes()
-    num_nodes()
-    num_edges()
-    get_neighbours()
-    add_node()
-    remove_node()
-    add_edge()
-    remove_edge()
-    select_random_node()
-    select_random_neighbour()
-    edges()
-    get_property()
-    get_trait()
+    A (possibly empty) list of `Agent`; `None` when `agent` doesn't return a valid position.
+    """
+
+    if (position := placements.get_position(agent)) is None:
+        return None
+
+    return [
+        neighbor
+        for node in graph.neighbors(position)
+        if (neighbor := placements.get_agent(node)) is not None
+    ]
+
+
+get_neighbors = get_neighbours
+"""Alias for get_neighbours"""
+
+
+def get_neighbour_sample_with_homophily(
+    agent: SaverAgent,
+    graph: nx.Graph,
+    placements: AgentPlacement,
+    size: int | None = None,
+) -> Agent | None:
+    """
+    EXPERIMENTAL: draw a sample of neighbours that satisfies the homophily of a SaverAgent.
 
     """
 
-    _graph: Any
-    _nodes: list[AgentT]
-    _addition_order: dict[str, int]
+    if (position := placements.get_position(agent)) is None:
+        return None
 
-    def __str__(self) -> str:
-        agent_type_str = f"[{type(self._nodes[0]).__name__}]" if self._nodes else ""
-        n, e = self.num_nodes(), self.num_edges()
-        return f"{self.__class__.__name__}{agent_type_str}(num_nodes={n}, num_edges={e})"
+    agent_is_saver = agent.properties.is_saver
+    candidates = []
+    ps = None
 
-    def __repr__(self) -> str:
-        return f"<{str(self)}>"
+    if (homophily := agent.traits.homophily) is not None:
+        ps = []
+        for node in graph.neighbors(position):
+            if (neighbor := placements.get_agent(node)) is not None:
+                ps.append(
+                    homophily
+                    if neighbor.properties.is_saver == agent_is_saver
+                    else 1 - homophily
+                )
+                candidates.append(neighbor)
 
-    @abstractmethod
-    def get_node(self, nid: int | str) -> AgentT:
-        """Get the node object given its id."""
+        ps = np.asarray(ps)
+        mass = ps.sum()
+        ps /= mass
 
-    def get_nodes(self):
-        """Get all the nodes in the graph."""
-        return self._nodes
+    rng = np.random.default_rng()
+    try:
+        return rng.choice(candidates, p=ps, size=size, replace=True)
 
-    def num_nodes(self) -> int:
-        """Return the number of nodes in the graph."""
-        return len(self._nodes)
-
-    @abstractmethod
-    def num_edges(self) -> int:
-        """Return the number of edges in the graph."""
-
-    @abstractmethod
-    def get_neighbours(self, node: AgentT | int | str) -> Sequence[AgentT]:
-        """Get the neighbourhood of a given node."""
-
-    def get_neighbors(self, *args, **kwargs) -> Sequence[AgentT]:
-        """Alias for the method get_neighbours."""
-        return self.get_neighbours(*args, **kwargs)
-
-    @abstractmethod
-    def add_node(self, node: AgentT) -> bool:
-        """Add the node to the graph."""
-
-    @abstractmethod
-    def remove_node(self, node: AgentT | int | str) -> bool:
-        """Remove the node from the graph."""
-
-    @abstractmethod
-    def add_edge(self, u: AgentT | int | str, v: AgentT | int | str) -> bool:
-        """Add an edge between nodes u and v (the nodes should already be in the graph)."""
-
-    @abstractmethod
-    def remove_edge(self, u: AgentT | int | str, v: AgentT | int | str) -> bool:
-        """Remove the edge between nodes u and v."""
-
-    def select_random_node(self, rng: Generator | int | None = None) -> AgentT:
-        """Select a random node in the graph."""
-        return choice(self.get_nodes(), rng=rng)
-
-    def select_random_neighbour(
-        self,
-        node: AgentT | int | str,
-        rng: Generator | int | None = None,
-    ) -> AgentT | None:
-        """
-        Select a random neighbour of a node in the graph.
-
-        If the nodes have homophily then the neighbours are chosen with probability
-        proportional to their homophily.
-
-        Parameters
-        ----------
-        node : AgentT | int | str
-            The node for which to select a neighbour.
-        rng : Generator | int | None, optional
-            The random number generator to use, by default None.
-
-        Returns
-        -------
-        AgentT | None
-            If the node is disconnected or the homophily constraints cannot be satisfied,
-            then None is returned.
-
-        """
-        if isinstance(node, int | str):
-            node = self.get_node(node)
-
-        neighs = self.get_neighbours(node)
-
-        if len(neighs) == 0:
-            warn("selected player does not have any neighbours")
-            return None
-
-        if (hom := node.get_trait("homophily")) is not None:
-            saver_trait = node.get_trait("is_saver")
-            ps = [hom if n.get_trait("is_saver") == saver_trait else 1 - hom for n in neighs]
-            # the `choice` function below takes care of the normalisation
-        else:
-            ps = None
-
-        try:
-            return choice(neighs, p=ps, rng=rng)
-
-        except ValueError:
-            warn("cannot satisfy homophily constraint for selected player")
-            return None
-
-    def select_random_neighbor(self, *args, **kwargs) -> AgentT | None:
-        """Alias for the method select_random_neighbour."""
-        return self.select_random_neighbour(*args, **kwargs)
-
-    # @abstractmethod
-    # def nodes(fun: Callable | None = None) -> Iterable:
-    #     """Get an iterator on the nodes, optionally calling a function."""
-
-    @abstractmethod
-    def edges(self, fun: Callable | None = None) -> Iterable:
-        """Get an iterator on the edges, optionally calling a function."""
-
-    def get_property(self, property_name: str) -> list[Any]:
-        """Get the values corresponding to a given property of all nodes."""
-        return [n.get_property(property_name) for n in self.get_nodes()]
-
-    def get_trait(self, trait_name: str) -> list[Any]:
-        """Get the node values corresponding to a given trait of all nodes."""
-        return [n.get_trait(trait_name) for n in self.get_nodes()]
-
-
-GraphT = TypeVar("GraphT", bound=BaseGraph)
-"""Used to refer to BaseGraph as well as its subclasses."""
-
-
-class SimpleGraph(BaseGraph, Generic[AgentT]):
-    """Unweighted, undirected graph built on top of NetworkX."""
-
-    _nodes: list[AgentT | None]
-
-    def __init__(self, graph: nx.Graph, nodes: Sequence[AgentT]):
-        self._graph = graph.copy()  # to avoid corruption due to the original graph being modified
-        self._nodes = []
-        self._addition_order = {}
-
-        # NB: nodes is relied upon and cannot be None in this implementation
-        for i, n in enumerate(nodes):
-            self._nodes.append(n)
-            nid = getattr(n, "uuid", str(i))
-            self._addition_order[nid] = i
-
-    def _get_pos_from_node(self, node: AgentT | int | str) -> int:
-        if hasattr(node, "uuid"):
-            node = self._addition_order[getattr(node, "uuid")]
-        elif isinstance(node, str):
-            node = self._addition_order[node]
-        elif isinstance(node, int | np.integer):
-            pass
-        else:
-            raise TypeError(f"Invalid type for node: {type(node)}")
-        return node
-
-    def get_node(self, nid: int | str) -> AgentT | None:
-        pos = self._get_pos_from_node(nid)  # type: ignore
-        return self._nodes[pos]
-
-    def get_nodes(self):
-        return list(filter(None, self._nodes))
-
-    def num_nodes(self) -> int:
-        # NB: this is specific to NetworkX because we allow None so as to not invalidate
-        # the self._addition_order
-        return len(list(filter(None, self._nodes)))
-
-    def num_edges(self) -> int:
-        return nx.number_of_edges(self._graph)
-
-    def get_neighbours(self, node: AgentT | int | str) -> list[AgentT]:
-        pos = self._get_pos_from_node(node)
-        _neighs = self._graph.neighbors(pos)
-        return list(filter(None, (self.get_node(i) for i in _neighs)))
-
-    def add_node(self, node: AgentT) -> bool:
-        pos = len(self._nodes)  # no +1 bcs python is 0-indexed
-
-        if getattr(node, "uuid", None) in self._addition_order:
-            # node is already in the graph (networkx does not raise an error)
-            return False
-
-        self._graph.add_node(pos)
-        self._nodes.append(node)
-        self._addition_order[getattr(node, "uuid", str(pos))] = pos
-
-        return True
-
-    def remove_node(self, node: AgentT | int | str) -> bool:
-        pos = self._get_pos_from_node(node)
-        try:
-            self._graph.remove_node(pos)
-            # NB: networkx does not invalidate node labels so we cannot change self._addition_order
-            self._nodes[pos] = None
-
-            return True
-        except nx.NetworkXError:
-            return False
-
-    def add_edge(self, u: AgentT | int | str, v: AgentT | int | str) -> bool:
-        try:
-            pos_u = self._get_pos_from_node(u)
-            pos_v = self._get_pos_from_node(v)
-
-        except KeyError:  # at least one of the nodes is not in the graph
-            return False
-
-        if self._graph.has_edge(pos_u, pos_v):
-            return False
-
-        if pos_u == pos_v:  # self-loops are not allowed
-            return False
-
-        self._graph.add_edge(pos_u, pos_v)
-        return True
-
-    def remove_edge(self, u: AgentT | int | str, v: AgentT | int | str) -> bool:
-        pos_u = self._get_pos_from_node(u)
-        pos_v = self._get_pos_from_node(v)
-        try:
-            self._graph.remove_edge(pos_u, pos_v)
-            return True
-        except nx.NetworkXError:
-            return False
-
-    def edges(self, fun: Callable | None = None) -> Iterable:
-        fun = fun or (lambda x: x)
-
-        for e in self._graph.edges:  # NB: this is specific to NetworkX
-            yield fun(e)
-
-
-def init_investor_graph(
-    nx_graph: nx.Graph,
-    savers_share: float = 0.5,
-    rng: np.random.Generator | int | None = None,
-    **agent_init_kwargs,
-):
-    rng = np.random.default_rng(rng)
-    num_players = nx_graph.number_of_nodes()
-    ps = [savers_share, 1 - savers_share]
-    is_saver = rng.choice([True, False], num_players, p=ps)
-    nodes = [InvestorAgent(is_saver=bool(s), **agent_init_kwargs) for s in is_saver]
-    return SimpleGraph(nx_graph, nodes)
+    except ValueError:
+        warnings.warn("cannot satisfy homophily constraints")
+        return None

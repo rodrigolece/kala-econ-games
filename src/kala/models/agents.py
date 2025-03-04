@@ -1,18 +1,33 @@
 """Module defining the agents"""
 
 from collections import deque
-from typing import Generic  # Any,TypeVar
+from typing import Generic, Protocol  # Any,
 from uuid import UUID, uuid4
 
 from kala.models.data import Properties, SaverProperties, SaverTraits, Traits
-from kala.models.memory import Memory, MemoryItem, UpdateRule
+from kala.models.memory import CappedMemory, MemoryItem, UpdateRule
+
+
+class Agent(Protocol):
+    """
+    Top-level protocol defining an agent.
+
+    Attributes
+    ----------
+    uuid : UUID
+        A unique identifier for the agent.
+    """
+
+    uuid: UUID
 
 
 class SaverAgent(Generic[Traits, Properties]):
     """
+    A saver agent with (generic) Traits and Properties.
+
     Attributes
     ----------
-    uuid : int | str
+    uuid : UUID
         A unique identifier for the agent.
     traits : Traits
         The traits of the agent, fixed during the course of a game.
@@ -23,7 +38,7 @@ class SaverAgent(Generic[Traits, Properties]):
     update_rule : UpdateRule | None
         The rule used to decide whether the agent should change their saver
         status depending on the outcome of the previous matches.
-    memory : Memory | None
+    memory : CappedMemory | None
         The memory of the agent, storing a number of previous matches.
     """
 
@@ -40,7 +55,7 @@ class SaverAgent(Generic[Traits, Properties]):
     # tracking its accumulation throughout a game is generally useful.
     score: float = 0
 
-    memory: Memory | None
+    memory: CappedMemory | None
     update_rule: UpdateRule[Properties] | None
 
     def __init__(
@@ -49,7 +64,7 @@ class SaverAgent(Generic[Traits, Properties]):
         properties: Properties,
         score: float = 0,
         uuid: UUID | None = None,
-        memory: Memory | None = None,
+        memory: CappedMemory | None = None,
         update_rule: UpdateRule | None = None,
     ):
         self.score = score

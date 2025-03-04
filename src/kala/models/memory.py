@@ -18,11 +18,14 @@ class MemoryItem(BaseModel, Generic[Properties]):
     # Moment in time
     time: int
 
-    properties: Properties
+    properties: Properties  # NB: passed by reference so cannot be considered immutable
 
 
-# Memory is a (finite) list of memory items
-Memory = deque[MemoryItem[Properties]]
+# Memory is simply a list of memory items
+Memory = list[MemoryItem[Properties]]
+
+# A finite list of memory items
+CappedMemory = deque[MemoryItem[Properties]]  # assumes maxlen attribute
 
 
 # An agent can dynamically adapt its strategies, which are encoded in its
@@ -32,7 +35,7 @@ class UpdateRule(Generic[Properties], Protocol):
     def update(
         self,
         properties: Properties,
-        memory: Memory,
+        memory: CappedMemory,
     ) -> None: ...
 
 
@@ -43,7 +46,7 @@ class SaverFlipAfterFractionLost(UpdateRule[SaverProperties]):
     def update(
         self,
         properties,  # passed as shallow copy
-        memory: Memory,
+        memory: CappedMemory,
     ) -> None:
         memory_length = memory.maxlen
 
