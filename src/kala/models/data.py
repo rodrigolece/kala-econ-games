@@ -6,6 +6,8 @@ from pydantic import BaseModel
 
 Traits = TypeVar("Traits", bound=BaseModel)
 Properties = TypeVar("Properties", bound=BaseModel)
+Properties_co = TypeVar("Properties_co", covariant=True)
+# Needed in update_rule (not sure why)
 
 
 class SaverTraits(BaseModel):

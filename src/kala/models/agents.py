@@ -1,14 +1,14 @@
 """Module defining the agents"""
 
 from collections import deque
-from typing import Generic, Protocol  # Any,
+from typing import Generic, Protocol
 from uuid import UUID, uuid4
 
 from kala.models.data import Properties, SaverProperties, SaverTraits, Traits
-from kala.models.memory import CappedMemory, MemoryItem, UpdateRule
+from kala.models.memory import CappedMemory, Memory, MemoryItem, UpdateRule
 
 
-class Agent(Protocol):
+class Agent(Generic[Traits, Properties], Protocol):
     """
     Top-level protocol defining an agent.
 
@@ -16,12 +16,42 @@ class Agent(Protocol):
     ----------
     uuid : UUID
         A unique identifier for the agent.
+    traits : Traits
+        The traits of the agent, fixed during the course of a game.
+    properties : Properties
+        The properties of the agent that could changed during the course of a game.
+    score : float
+        The score accumulated by the agent.
+    update_rule : UpdateRule | None
+        The rule used to decide whether the agent should change their saver
+        status depending on the outcome of the previous matches.
+    memory : CappedMemory | None
+        The memory of the agent, storing a number of previous matches.
+
+    Methods
+    -------
+    update()
+
     """
 
     uuid: UUID
+    traits: Traits
+    properties: Properties
+    score: float = 0
+
+    # Optional attributes
+    memory: Memory | CappedMemory | None
+    update_rule: UpdateRule[Properties] | None
+
+    def update(
+        self,
+        payoff: float,
+        lost_match: bool,
+        time: int,
+    ) -> None: ...
 
 
-class SaverAgent(Generic[Traits, Properties]):
+class SaverAgent(Agent[SaverTraits, SaverProperties]):
     """
     A saver agent with (generic) Traits and Properties.
 
@@ -40,40 +70,32 @@ class SaverAgent(Generic[Traits, Properties]):
         status depending on the outcome of the previous matches.
     memory : CappedMemory | None
         The memory of the agent, storing a number of previous matches.
+
+    Methods
+    -------
+    update()
+
     """
 
-    # Using the built-in uuid library
     uuid: UUID
-
-    # These properties are intentionally public (no leading underscore) to
-    # allow direct access, making it easier to extract necessary information.
-    traits: Traits
-    properties: Properties
-
-    # The `savings` attribute was removed from `SaverProperty` and moved to the
-    # agent’s `score`. This makes sense if payoff is a global concept, as
-    # tracking its accumulation throughout a game is generally useful.
+    traits: SaverTraits
+    properties: SaverProperties
     score: float = 0
 
-    memory: CappedMemory | None
-    update_rule: UpdateRule[Properties] | None
+    memory: CappedMemory
+    update_rule: UpdateRule[SaverProperties] | None
 
     def __init__(
         self,
-        traits: Traits,
-        properties: Properties,
+        traits: SaverTraits,
+        properties: SaverProperties,
+        memory: CappedMemory,
         score: float = 0,
         uuid: UUID | None = None,
-        memory: CappedMemory | None = None,
         update_rule: UpdateRule | None = None,
     ):
         self.score = score
         self.uuid = uuid or uuid4()
-
-        # Traits, properties, memory and update rules must be provided when creating
-        # an agent. This allows different agents in the same game to have
-        # distinct update rules. While this makes instantiation more involved,
-        # convenient initializers can be created for common scenarios.
         self.traits = traits
         self.properties = properties
         self.memory = memory
@@ -188,6 +210,7 @@ def init_saver_agent(
     )
 
     props = SaverProperties(is_saver=is_saver)
-    memory = deque([], maxlen=memory_length) if memory_length else None
+    memory_length = memory_length or 10
+    memory: CappedMemory = deque([], maxlen=memory_length)
 
-    return SaverAgent(traits, props, score=0, memory=memory, update_rule=update_rule)
+    return SaverAgent(traits, props, memory, score=0, update_rule=update_rule)

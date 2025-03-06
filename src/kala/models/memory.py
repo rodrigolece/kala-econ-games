@@ -2,7 +2,7 @@ from collections import deque
 from typing import Generic, Protocol
 from pydantic import BaseModel
 
-from kala.models.data import Properties, SaverProperties
+from kala.models.data import Properties, SaverProperties, Properties_co
 
 
 class MemoryItem(BaseModel, Generic[Properties]):
@@ -31,7 +31,7 @@ CappedMemory = deque[MemoryItem[Properties]]  # assumes maxlen attribute
 # An agent can dynamically adapt its strategies, which are encoded in its
 # properties. This class defines how a strategy is updated based on the
 # agent's current properties  and memory.
-class UpdateRule(Generic[Properties], Protocol):
+class UpdateRule(Generic[Properties_co], Protocol):
     def update(
         self,
         properties: Properties,

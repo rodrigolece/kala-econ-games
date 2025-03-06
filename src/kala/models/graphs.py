@@ -1,7 +1,7 @@
 """Module defining the interface for the underlying graphs."""
 
 import warnings
-from typing import Generator, Hashable, Mapping, Protocol
+from typing import Generator, Hashable, MutableMapping, Protocol
 
 import networkx as nx
 import numpy as np
@@ -38,7 +38,7 @@ class AgentPlacementNetX(AgentPlacement):
 
     """
 
-    _mapping: Mapping[NodeID, Agent | None]
+    _mapping: MutableMapping[NodeID, Agent | None]
 
     def __init__(self):
         self._mapping = {}
@@ -54,7 +54,9 @@ class AgentPlacementNetX(AgentPlacement):
 
     def get_position(self, agent: Agent) -> NodeID | None:
         for k, v in self._mapping.items():
-            if agent.uuid == v.uuid:
+            if v is None:
+                continue
+            elif agent.uuid == v.uuid:
                 return k
         return None
 
@@ -63,6 +65,8 @@ class AgentPlacementNetX(AgentPlacement):
 
     def __iter__(self) -> Generator[tuple[NodeID, Agent], None, None]:
         for k, v in self._mapping.items():
+            if v is None:
+                continue
             yield (k, v)
 
     @classmethod
@@ -136,13 +140,13 @@ def get_neighbour_sample_with_homophily(
                 )
                 candidates.append(neighbor)
 
-        ps = np.asarray(ps)
-        mass = ps.sum()
-        ps /= mass
+        ps_arr = np.asarray(ps)
+        mass = ps_arr.sum()
+        ps_arr /= mass
 
     rng = np.random.default_rng()
     try:
-        return rng.choice(candidates, p=ps, size=size, replace=True)
+        return rng.choice(candidates, p=ps_arr, size=size, replace=True)  # type:ignore
 
     except ValueError:
         warnings.warn("cannot satisfy homophily constraints")
