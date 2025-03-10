@@ -1,6 +1,7 @@
 """Module defining the interface for the underlying graphs."""
 
 import warnings
+from functools import lru_cache
 from typing import Generator, Hashable, MutableMapping, Protocol
 
 import networkx as nx
@@ -85,6 +86,7 @@ class AgentPlacementNetX(AgentPlacement):
         return placement
 
 
+@lru_cache
 def get_neighbours(
     agent: Agent,
     graph: nx.Graph,

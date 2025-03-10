@@ -1,55 +1,39 @@
 """Module defining agent strategies."""
 
-from abc import ABC, abstractmethod
-from typing import Callable, Mapping, TypeVar
+from typing import Callable, Generic, Protocol
 
+import networkx as nx
 import numpy as np
-from numpy.random import Generator
 
-from kala.utils.stats import get_random_state, lognormal
-
-
-class BaseStrategy(ABC):
-    """
-    Base strategy meant to be subclassed.
-
-    Attributes
-    ----------
-    stochastic : bool
-        Whether the strategy is stochastic.
-    payoff_matrix : Mapping[tuple[str, ...], tuple[float, ...]]
-        A mapping from the strategy of each agent to the payoff tuple.
-
-    Methods
-    -------
-    calculate_payoff()
-        Calculate the payoff for a strategy.
-
-    """
-
-    stochastic: bool
-    payoff_matrix: Mapping[tuple[str, ...], tuple[float, ...]]
-
-    @abstractmethod
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}(stochastic={self.stochastic})"
-
-    def __repr__(self) -> str:
-        return f"<{str(self)}>"
-
-    @abstractmethod
-    def calculate_payoff(self, *args, **kwargs) -> tuple[float, ...]:
-        """A realization of the payoff for a strategy."""
+from kala.models.agents import Agent
+from kala.models.data import Properties, Traits
+from kala.models.graphs import AgentPlacement, get_neighbours
+from kala.utils.stats import lognormal
 
 
-StrategyT = TypeVar("StrategyT", bound=BaseStrategy)
-"""Used to refer to BaseStrategy as well as its subclasses."""
+class MatchingStrategy(Generic[Traits, Properties], Protocol):
+    def select_matches(
+        self,
+        placements: AgentPlacement,
+        graph: nx.Graph,
+    ) -> list[list[Agent[Traits, Properties]]]:
+        rng = np.default_rng()
+        num_nodes = graph.number_of_nodes()
+        selection = rng.choice(graph, size=num_nodes // 2)
+
+        out = []
+
+        for node in selection:
+            agent = placements.get_agent(node)
+            opponent = rng.choice(get_neighbours(agent, graph, placements))
+            if opponent is None:
+                continue
+            out.append([agent, opponent])
+
+        return out
 
 
-class CooperationStrategy(BaseStrategy):
+class PayoffStrategy(Generic[Traits, Properties], Protocol):
     """
     A strategy that models cooperation between agents.
 
@@ -58,19 +42,13 @@ class CooperationStrategy(BaseStrategy):
 
     """
 
-    _sigma: Mapping[tuple[str, ...], float]
-
-    # pylint: disable=unused-argument
     def __init__(
         self,
-        *args,
         stochastic: bool = True,
         differential_inefficient: float = 0.1,
         differential_efficient: float = 0.15,
         dist_mean: float = 0.0,
         dist_sigma_func: Callable = lambda x: x,
-        rng: Generator | int | None = None,
-        **kwargs,
     ):
         """
         Initialize a cooperation strategy.
@@ -102,11 +80,6 @@ class CooperationStrategy(BaseStrategy):
 
         """
         # Checks
-        if not 0 < differential_inefficient < 1:
-            raise ValueError("expected number between (0, 1) for 'differential_inefficient'")
-
-        if differential_efficient <= 0:
-            raise ValueError("expected number greater than 0 for 'differential_efficient'")
 
         # Initialize
         self.stochastic = stochastic
@@ -142,14 +115,9 @@ class CooperationStrategy(BaseStrategy):
         # TODO: more elegant solution would be to accept initialized distribution that
         # doesn't need parameters and is ready to return random numbers
 
-        self._rng = get_random_state(rng)
+    def calculate_payoff(self, agents: list[Agent[Traits, Properties]]) -> list[float]:
+        """A realization of the payoff for a strategy."""
 
-    # pylint: disable=arguments-differ
-    def calculate_payoff(
-        self,
-        *agents,
-        **kwargs,
-    ) -> tuple[float, ...]:
         if len(agents) != 2:
             raise ValueError("expected exactly two agents")
 
@@ -158,7 +126,8 @@ class CooperationStrategy(BaseStrategy):
         payoffs = np.asarray(self.payoff_matrix[saver_traits]) + specs
 
         if self.stochastic:
-            draw = lognormal(mean=0, sigma=self._sigma[saver_traits], rng=self._rng)
+            rng = np.random.default_rng()
+            draw = lognormal(mean=0, sigma=self._sigma[saver_traits], rng=rng)
             # below ignores the dummy draw for (non-saver, non-saver)
             payoffs *= [draw if ag.is_saver() else 1 for ag in agents]
 
