@@ -1,13 +1,15 @@
 """Helper functions"""
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from multiprocessing import Pool
 
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel
 
-from kala.models import DiscreteTwoByTwoGame
+from kala.models import CooperationStrategy, DiscreteTwoByTwoGame
+from kala.models.graphs import init_investor_graph
+from kala.models.memory_rules import MemoryRuleT
 from kala.utils.io import NetzDatabase
 
 
@@ -28,6 +30,22 @@ class SurvivalSpec(BaseModel):
     num_games: int
 
 
+class BlackSwanShockSpec(BaseModel):
+    """Spec for a survival experiment that has shocks."""
+
+    network_name: str
+    subnetwork: str | None
+    memory_length: int
+    memory_frac: float
+    savers_share: float
+    differentials: tuple[float, float]  # efficient, inefficient
+    num_rounds: int
+    num_games: int
+    shock_type: str
+    shock_spread: int
+    shock_round: int
+
+
 class BaseSurvivalExperiment(ABC):
     """
     Base class to run experiments.
@@ -40,15 +58,30 @@ class BaseSurvivalExperiment(ABC):
 
     spec: SurvivalSpec
     num_players: int
+    mem_rule: MemoryRuleT | None
 
     def __init__(self, spec: SurvivalSpec):
         self.spec = spec
         self._nx_graph = NET_DB.read_netzschleuder_network(spec.network_name, spec.subnetwork)
         self.num_players = self._nx_graph.number_of_nodes()
 
-    @abstractmethod
     def _init_game(self) -> DiscreteTwoByTwoGame:
-        pass
+        graph = init_investor_graph(
+            self._nx_graph,
+            savers_share=self.spec.savers_share,
+            deterministic=True,  # NB: this is new behaviour
+            min_specialization=1 - self.spec.differentials[1],
+            update_rule=self.mem_rule,
+        )
+
+        eff, ineff = self.spec.differentials
+        coop = CooperationStrategy(
+            stochastic=True,
+            differential_efficient=eff,
+            differential_inefficient=ineff,
+        )
+
+        return DiscreteTwoByTwoGame(graph, coop)
 
     # pylint: disable=unused-argument
     def _single_game_summary(self, dummy_arg) -> tuple[int, int]:
@@ -59,12 +92,8 @@ class BaseSurvivalExperiment(ABC):
             n_savers = game.get_num_savers()
             savers[i] = n_savers
 
-            if n_savers == self.num_players:
-                return self.num_players, i
-
-            if n_savers == 0:
-                savers = savers[: i + 1]
-                break
+            if n_savers in [0, self.num_players]:
+                return n_savers, i
 
             game.play_round()
 
@@ -96,18 +125,9 @@ class BaseSurvivalExperiment(ABC):
 
         """
         state_variables = []
-
-        # if shock_names is None:
-        #     shock_names = []
-
-        # if shock_rounds is None:
-        #     shock_rounds = []
-
-        # shock_iterator = zip(filter(None, shock_names), filter(None, shock_rounds))
-
         game = self._init_game()
 
-        for _ in range(self.spec.num_rounds):
+        for i in range(self.spec.num_rounds):
             svars = [
                 float(game.get_total_wealth()),
                 game.get_num_savers(),
@@ -115,20 +135,12 @@ class BaseSurvivalExperiment(ABC):
             ]
             state_variables.append(svars)
 
-            # if i == shock_time:
-            #     shock_handle = getattr(shocks, shock_name, None)
-
-            #     if shock_handle is not None:
-            #         # print(f"applying shock {shock_name} at t={shock_time}")
-            #         shock = shock_handle()
-            #         shock.apply(game)
-
-            #     try:
-            #         shock_name, shock_time = next(shock_iterator)
-            #     except StopIteration:
-            #         shock, shock_time = None, None
-
             game.play_round()
+
+            # subclass BlackSwanShockExperiment will have shock attr
+            if hasattr(self, "shock") and i == self.spec.shock_round:
+                for _ in range(self.spec.shock_spread):
+                    self.shock.apply(game)
 
         out = pd.DataFrame(state_variables, columns=["wealth", "savers", "gini"])
 
