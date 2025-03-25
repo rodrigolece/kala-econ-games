@@ -67,7 +67,6 @@ class SaverCooperationPayoffStrategy(PayoffStrategy[SaverTraits, SaverProperties
         stochastic: bool = True,
         differential_inefficient: float = 0.1,
         differential_efficient: float = 0.15,
-        dist_mean: float = 0.0,
         dist_sigma_func: Callable = lambda x: x,
     ):
         """
@@ -83,15 +82,10 @@ class SaverCooperationPayoffStrategy(PayoffStrategy[SaverTraits, SaverProperties
         differential_efficient : float, optional
             The amount by which a saver is more efficient when encountering another saver,
             by default 0.15.
-        dist_mean : float, optional
-            The mean of the lognormal distribution used to generate stochastic payoffs,
-            by default 1.0.
         dist_sigma_func : Callable, optional
             A function that maps specializations (efficient and inefficient) to the
             standard deviation of the lognormal distribution. By default, the function
             is the identity function.
-        rng : Generator, optional
-            A numpy random number generator, by default None.
 
         Raises
         ------
@@ -125,7 +119,6 @@ class SaverCooperationPayoffStrategy(PayoffStrategy[SaverTraits, SaverProperties
         param_var_ss = np.log(1 + np.sqrt(1 + 4 * var_ss)) - np.log(2)
         param_var_sn = np.log(1 + np.sqrt(1 + 4 * var_sn)) - np.log(2)
 
-        self._mean = dist_mean
         self._sigma = {
             ("saver", "saver"): np.sqrt(param_var_ss),
             ("saver", "non-saver"): np.sqrt(param_var_sn),
@@ -152,3 +145,15 @@ class SaverCooperationPayoffStrategy(PayoffStrategy[SaverTraits, SaverProperties
             payoffs *= [draw if ag.properties.is_saver else 1 for ag in agents]
 
         return payoffs
+
+def init_saver_cooperation_strategy(
+    stochastic: bool = True,
+    differential_efficient: float = 0.15,
+    differential_inefficient: float = 0.05,
+) -> SaverCooperationPayoffStrategy:
+    """Initialize a cooperation strategy for saver agents with common defaults."""
+    return SaverCooperationPayoffStrategy(
+        stochastic=stochastic,
+        differential_efficient=differential_efficient,
+        differential_inefficient=differential_inefficient,
+    )

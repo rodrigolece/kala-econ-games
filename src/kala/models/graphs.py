@@ -41,11 +41,11 @@ class AgentPlacementNetX(AgentPlacement):
 
     _mapping: MutableMapping[NodeID, Agent | None]
 
-    def __init__(self):
+    def __init__(self):  # NB: needed (instead of attribute default) so we can define a classmethod
         self._mapping = {}
 
     def clear_node(self, position: NodeID) -> NodeID | None:
-        node  = self._mapping.pop(position, None)
+        node = self._mapping.pop(position, None)
         return position if node else None
 
     def add_agent(self, agent: Agent, position: NodeID) -> None:
@@ -85,6 +85,11 @@ class AgentPlacementNetX(AgentPlacement):
             placement.add_agent(agent, position)
 
         return placement
+
+
+def init_agent_placement(agents: list[Agent], graph: nx.Graph) -> AgentPlacementNetX:
+    """Initialize an agent placement from a list of agents and a graph."""
+    return AgentPlacementNetX.init_bijection(agents, graph)
 
 
 def get_neighbours(
@@ -136,9 +141,7 @@ def get_neighbour_sample_with_homophily(
         for node in graph.neighbors(position):
             if (neighbor := placements.get_agent(node)) is not None:
                 ps.append(
-                    homophily
-                    if neighbor.properties.is_saver == agent_is_saver
-                    else 1 - homophily
+                    homophily if neighbor.properties.is_saver == agent_is_saver else 1 - homophily
                 )
                 candidates.append(neighbor)
 
