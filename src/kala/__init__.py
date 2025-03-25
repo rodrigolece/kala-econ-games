@@ -11,9 +11,12 @@ from kala.models.agents import init_saver_agent
 from kala.models.game import get_summed_score, play_game
 from kala.models.graphs import init_agent_placement
 from kala.models.strategies import init_saver_cooperation_strategy
+from kala.utils import NetzDatabase
 
 
 __all__ = [
+    # Utils
+    "NetzDatabase",
     # Implementations
     "MatchingStrategy",
     "SaverCooperationPayoffStrategy",
