@@ -1,8 +1,9 @@
 from collections import deque
 from typing import Generic, Protocol
+
 from pydantic import BaseModel
 
-from kala.models.data import Properties, SaverProperties, Properties_co
+from kala.models.data import Properties, Properties_co, SaverProperties
 
 
 class MemoryItem(BaseModel, Generic[Properties]):

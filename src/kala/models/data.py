@@ -4,6 +4,7 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
+
 Traits = TypeVar("Traits", bound=BaseModel)
 Properties = TypeVar("Properties", bound=BaseModel)
 Properties_co = TypeVar("Properties_co", covariant=True)

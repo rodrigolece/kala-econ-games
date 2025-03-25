@@ -5,42 +5,62 @@ from typing import Callable, Generic, Protocol
 import networkx as nx
 import numpy as np
 
-from kala.models.agents import Agent
+from kala.models.agents import Agent, SaverProperties, SaverTraits
 from kala.models.data import Properties, Traits
 from kala.models.graphs import AgentPlacement, get_neighbours
 from kala.utils.stats import lognormal
 
 
-class MatchingStrategy(Generic[Traits, Properties], Protocol):
+class MatchingStrategy(Generic[Traits, Properties]):
     def select_matches(
         self,
         placements: AgentPlacement,
         graph: nx.Graph,
     ) -> list[list[Agent[Traits, Properties]]]:
-        rng = np.default_rng()
+        rng = np.random.default_rng()
         num_nodes = graph.number_of_nodes()
         selection = rng.choice(graph, size=num_nodes // 2)
 
         out = []
 
         for node in selection:
-            agent = placements.get_agent(node)
-            opponent = rng.choice(get_neighbours(agent, graph, placements))
-            if opponent is None:
+            if (agent := placements.get_agent(node)) is None:
                 continue
+
+            if (opponent := rng.choice(get_neighbours(agent, graph, placements))) is None:
+                continue
+
             out.append([agent, opponent])
 
         return out
 
-
 class PayoffStrategy(Generic[Traits, Properties], Protocol):
     """
-    A strategy that models cooperation between agents.
+    Initialize a cooperation strategy.
+
+    Attributes
+    ----------
+    stochastic : bool, optional
+        Whether to use a stochastic payoff matrix, by default True.
+    payoff_matrix : dict[tuple[str, str], tuple[float, float]]
+        A dictionary mapping types of agent traits to numerical payoffs.
+
+    """
+    stochastic: bool = True
+    payoff_matrix: dict[tuple[str, str], tuple[float, float]]
+    
+    def calculate_payoff(self, agents: list[Agent[Traits, Properties]]) -> list[float]:
+        """A realization of the payoff for a strategy."""
+
+class SaverCooperationPayoffStrategy(PayoffStrategy[SaverTraits, SaverProperties]):
+    """
+    A strategy that models cooperation between Saver agents.
 
     Two agents that are savers will have a higher payoff (on expectation) than in all other cases,
     but a saver that encounters a non-saver will see a worse outcome than the non-saver.
 
     """
+    
 
     def __init__(
         self,
@@ -115,20 +135,20 @@ class PayoffStrategy(Generic[Traits, Properties], Protocol):
         # TODO: more elegant solution would be to accept initialized distribution that
         # doesn't need parameters and is ready to return random numbers
 
-    def calculate_payoff(self, agents: list[Agent[Traits, Properties]]) -> list[float]:
+    def calculate_payoff(self, agents: list[Agent[SaverTraits, SaverProperties]]) -> list[float]:
         """A realization of the payoff for a strategy."""
 
         if len(agents) != 2:
             raise ValueError("expected exactly two agents")
 
-        saver_traits = tuple(self._saver_encoding[ag.is_saver()] for ag in agents)
-        specs = np.asarray([ag.get_trait("min_specialization") for ag in agents])
+        saver_traits: tuple[str, str] = tuple(self._saver_encoding[ag.properties.is_saver] for ag in agents) # type: ignore
+        specs = np.asarray([ag.traits.min_specialization for ag in agents])
         payoffs = np.asarray(self.payoff_matrix[saver_traits]) + specs
 
         if self.stochastic:
             rng = np.random.default_rng()
             draw = lognormal(mean=0, sigma=self._sigma[saver_traits], rng=rng)
             # below ignores the dummy draw for (non-saver, non-saver)
-            payoffs *= [draw if ag.is_saver() else 1 for ag in agents]
+            payoffs *= [draw if ag.properties.is_saver else 1 for ag in agents]
 
-        return tuple(payoffs)
+        return payoffs

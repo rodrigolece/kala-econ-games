@@ -1,7 +1,6 @@
 """Module defining the interface for the underlying graphs."""
 
 import warnings
-from functools import lru_cache
 from typing import Generator, Hashable, MutableMapping, Protocol
 
 import networkx as nx
@@ -9,13 +8,14 @@ import numpy as np
 
 from kala.models.agents import Agent, SaverAgent
 
+
 NodeID = Hashable
 
 
 class AgentPlacement(Protocol):
     """Top-level protocol defining a placement of agents on top of nodes."""
 
-    def clear_node(self, position: NodeID) -> None:
+    def clear_node(self, position: NodeID) -> NodeID | None:
         """Remove agent from node if present."""
 
     def add_agent(self, agent: Agent, position: NodeID) -> None:
@@ -44,8 +44,9 @@ class AgentPlacementNetX(AgentPlacement):
     def __init__(self):
         self._mapping = {}
 
-    def clear_node(self, position: NodeID) -> None:
-        del self._mapping[position]
+    def clear_node(self, position: NodeID) -> NodeID | None:
+        node  = self._mapping.pop(position, None)
+        return position if node else None
 
     def add_agent(self, agent: Agent, position: NodeID) -> None:
         if self._mapping.get(position) is None:
@@ -86,7 +87,6 @@ class AgentPlacementNetX(AgentPlacement):
         return placement
 
 
-@lru_cache
 def get_neighbours(
     agent: Agent,
     graph: nx.Graph,
