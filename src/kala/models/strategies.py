@@ -8,7 +8,6 @@ import numpy as np
 from kala.models.agents import Agent, SaverProperties, SaverTraits
 from kala.models.data import Properties, Traits
 from kala.models.graphs import AgentPlacement, get_neighbours
-from kala.utils.stats import lognormal
 
 
 class MatchingStrategy(Generic[Traits, Properties]):
@@ -34,6 +33,7 @@ class MatchingStrategy(Generic[Traits, Properties]):
 
         return out
 
+
 class PayoffStrategy(Generic[Traits, Properties], Protocol):
     """
     Initialize a cooperation strategy.
@@ -46,11 +46,13 @@ class PayoffStrategy(Generic[Traits, Properties], Protocol):
         A dictionary mapping types of agent traits to numerical payoffs.
 
     """
+
     stochastic: bool = True
     payoff_matrix: dict[tuple[str, str], tuple[float, float]]
-    
+
     def calculate_payoff(self, agents: list[Agent[Traits, Properties]]) -> list[float]:
         """A realization of the payoff for a strategy."""
+
 
 class SaverCooperationPayoffStrategy(PayoffStrategy[SaverTraits, SaverProperties]):
     """
@@ -60,7 +62,6 @@ class SaverCooperationPayoffStrategy(PayoffStrategy[SaverTraits, SaverProperties
     but a saver that encounters a non-saver will see a worse outcome than the non-saver.
 
     """
-    
 
     def __init__(
         self,
@@ -134,17 +135,20 @@ class SaverCooperationPayoffStrategy(PayoffStrategy[SaverTraits, SaverProperties
         if len(agents) != 2:
             raise ValueError("expected exactly two agents")
 
-        saver_traits: tuple[str, str] = tuple(self._saver_encoding[ag.properties.is_saver] for ag in agents) # type: ignore
+        saver_traits: tuple[str, str] = tuple(
+            self._saver_encoding[ag.properties.is_saver] for ag in agents
+        )  # type: ignore
         specs = np.asarray([ag.traits.min_specialization for ag in agents])
         payoffs = np.asarray(self.payoff_matrix[saver_traits]) + specs
 
         if self.stochastic:
             rng = np.random.default_rng()
-            draw = lognormal(mean=0, sigma=self._sigma[saver_traits], rng=rng)
+            draw = rng.lognormal(mean=0, sigma=self._sigma[saver_traits])
             # below ignores the dummy draw for (non-saver, non-saver)
             payoffs *= [draw if ag.properties.is_saver else 1 for ag in agents]
 
         return payoffs
+
 
 def init_saver_cooperation_strategy(
     stochastic: bool = True,
