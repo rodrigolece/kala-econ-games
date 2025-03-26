@@ -12,6 +12,7 @@ from kala.models import (
 from kala.models.game import play_game
 from kala.utils import (
     NetzDatabase,
+    get_gini_coefficient,
     get_saver_agents,
     get_summed_score,
     init_saver_agent,
@@ -32,6 +33,7 @@ __all__ = [
     "play_game",
     "get_summed_score",
     "get_saver_agents",
+    "get_gini_coefficient",
     "init_saver_agent",
     "init_savers_gamestate_from_netz",
     # Shocks
