@@ -68,4 +68,3 @@ def test_clear_node(fixture_networkx_graph, fixture_agent_placement):
 
     # The remaining RHS node should be disconnected
     assert get_neighbours(plcmt.get_agent(5), fixture_networkx_graph, plcmt) == []
-    

@@ -4,11 +4,11 @@ import networkx as nx
 import pytest
 
 from kala import (
-    init_saver_agent,
+    AgentPlacementNetX,
     GameState,
     MatchingStrategy,
     SaverCooperationPayoffStrategy,
-    AgentPlacementNetX,
+    init_saver_agent,
 )
 
 

@@ -22,15 +22,15 @@ def test_remove_player(fixture_game_state):
     RemovePlayer(agents[2]).apply(game)
     assert game.graph.number_of_nodes() == 6
     assert len(game.agents) == 5
-    
+
     # after removing agent, the agents coming after are shifted down
     # we test that the RHS is still connected
-    neighs = get_neighbours(agents[2], game.graph, game.placements) # NB: [3] is now [2]
+    neighs = get_neighbours(agents[2], game.graph, game.placements)  # NB: [3] is now [2]
     for n in neighs:
         print(f"neigh: {str(n.uuid)[:8]}")
     assert len(neighs) == 2
 
-    # Remove one of the two remaining nodes on the LHS
+    # Remove one of the two remaining nodes on the LHS
     a = agents[0]
     RemovePlayer(a).apply(game)
 
@@ -38,9 +38,8 @@ def test_remove_player(fixture_game_state):
     assert len(game.agents) == 4
     assert get_neighbours(a, game.graph, game.placements) is None
 
-    # The last LHS node shoudl be disconnected
+    # The last LHS node shoudl be disconnected
     assert get_neighbours(agents[0], game.graph, game.placements) == []
-
 
 
 def test_remove_random_player(fixture_game_state):
@@ -51,8 +50,6 @@ def test_remove_random_player(fixture_game_state):
 
     assert game.graph.number_of_nodes() == 6
     assert len(game.agents) == 5
-
-
 
 
 def test_add_edge(fixture_game_state):
@@ -66,7 +63,7 @@ def test_add_edge(fixture_game_state):
     assert game.graph.number_of_nodes() == 6
     assert game.graph.number_of_edges() == 8
 
-    assert agents[-1] in get_neighbours(a, game.graph, game.placements)  # neighbours bcs of new edge
+    assert agents[-1] in get_neighbours(a, game.graph, game.placements)
 
 
 def test_add_random_edge(fixture_game_state):
@@ -122,4 +119,3 @@ def test_swap_random_edge(fixture_game_state):
 
     assert game.graph.number_of_nodes() == 6
     assert game.graph.number_of_edges() == 7
-

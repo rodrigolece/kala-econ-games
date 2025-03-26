@@ -14,9 +14,10 @@ def fixture_game_plan():
     }
     return GamePlan(steps=10, shocks=shocks)
 
+
 def test_game_plan(fixture_game_plan):
     """Test that GamePlan works correctly."""
-    
+
     plan = fixture_game_plan
     assert plan.steps == 10
     assert len(plan.shocks) == 2
@@ -28,7 +29,7 @@ def test_play_game(fixture_game_state, fixture_game_plan):
     """Test that a game can be played through multiple steps."""
     initial_num_agents = len(fixture_game_state.agents)
     initial_num_edges = fixture_game_state.graph.number_of_edges()
-    
+
     # Play through the game and check state at each step
     for time, state in play_game(fixture_game_state, fixture_game_plan):
         # Before player shock
@@ -40,7 +41,7 @@ def test_play_game(fixture_game_state, fixture_game_plan):
 
         # Before edge shock shouldn't change number of edges
         assert state.graph.number_of_edges() == initial_num_edges
-            
+
         # Basic invariants that should always hold
         assert isinstance(state, GameState)
         assert state.graph.number_of_nodes() > 0

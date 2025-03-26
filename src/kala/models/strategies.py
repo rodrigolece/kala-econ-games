@@ -26,7 +26,10 @@ class MatchingStrategy(Generic[Traits, Properties]):
             if (agent := placements.get_agent(node)) is None:
                 continue
 
-            if (opponent := rng.choice(get_neighbours(agent, graph, placements))) is None:
+            if (neighs := get_neighbours(agent, graph, placements)) is None:
+                continue
+
+            if (opponent := rng.choice(neighs)) is None:  # type: ignore
                 continue
 
             out.append([agent, opponent])
