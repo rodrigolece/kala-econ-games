@@ -5,8 +5,7 @@ from uuid import UUID
 import numpy as np
 import pytest
 
-from kala.models.agents import init_saver_agent
-from kala.models.memory import SaverFlipAfterFractionLost
+from kala import init_saver_agent, SaverFlipAfterFractionLost
 
 
 NUM_GAMES = 5

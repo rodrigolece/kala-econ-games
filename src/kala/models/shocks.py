@@ -1,11 +1,10 @@
 """Module defining different types of shocks."""
 
-
 import numpy as np
 
 from kala.models.agents import Agent
 from kala.models.game import GameState, Shock
-from kala.utils.config import DEBUG
+from kala.settings import DEBUG
 
 
 class RemovePlayer(Shock):
@@ -23,7 +22,7 @@ class RemovePlayer(Shock):
 
         if DEBUG:
             print("removing player", self.agent.uuid)
-        
+
         state.placements.clear_node(node)
         for i, agent in enumerate(state.agents):
             if agent.uuid == self.agent.uuid:
@@ -40,7 +39,7 @@ class RemoveRandomPlayer(Shock):
         rng = np.random.default_rng()
         node = rng.choice(state.graph, size=1)[0]
         agent = state.placements.get_agent(node)
-        
+
         if agent is None:
             if DEBUG:
                 print("node not found; passing")
@@ -58,8 +57,6 @@ class RemoveRandomPlayer(Shock):
         return state
 
 
-
-
 class AddEdge(Shock):
     """Add an edge in the game."""
 
@@ -70,7 +67,7 @@ class AddEdge(Shock):
     def apply(self, state: GameState) -> GameState:
         node_u = state.placements.get_position(self.agent_u)
         node_v = state.placements.get_position(self.agent_v)
-        
+
         if node_u is None or node_v is None:
             if DEBUG:
                 print("one or both nodes not found; passing")
@@ -109,7 +106,8 @@ class AddRandomEdge(Shock):
             state.graph.add_edge(node_u, node_v)
 
         return state
-    
+
+
 class RemoveEdge(Shock):
     """Remove a specific edge from the game."""
 
@@ -120,7 +118,7 @@ class RemoveEdge(Shock):
     def apply(self, state: GameState) -> GameState:
         node_u = state.placements.get_position(self.agent_u)
         node_v = state.placements.get_position(self.agent_v)
-        
+
         if node_u is None or node_v is None:
             if DEBUG:
                 print("one or both nodes not found; passing")
@@ -128,7 +126,7 @@ class RemoveEdge(Shock):
 
         if DEBUG:
             print(f"removing edge ({node_u}, {node_v})")
-            
+
         state.graph.remove_edge(node_u, node_v)
         return state
 
@@ -150,7 +148,7 @@ class RemoveRandomEdge(Shock):
 
         if DEBUG:
             print(f"removing edge ({node_u}, {node_v})")
-            
+
         state.graph.remove_edge(node_u, node_v)
         return state
 
@@ -160,7 +158,7 @@ class SwapEdge(Shock):
 
     def __init__(self, pivot_u: Agent, agent_v: Agent, agent_w: Agent):
         self.pivot_u = pivot_u
-        self.agent_v = agent_v 
+        self.agent_v = agent_v
         self.agent_w = agent_w
 
     def apply(self, state: GameState) -> GameState:
@@ -205,7 +203,7 @@ class SwapRandomEdge(Shock):
             if attempts == self.max_attempts:
                 node_w = None  # don't take any action
                 break
-            node_w = rng.choice(state.graph, size=1)[0] 
+            node_w = rng.choice(state.graph, size=1)[0]
             attempts += 1
 
         if node_w is not None:
@@ -215,4 +213,3 @@ class SwapRandomEdge(Shock):
             state.graph.add_edge(node_u, node_w)
 
         return state
-

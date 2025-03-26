@@ -148,16 +148,3 @@ class SaverCooperationPayoffStrategy(PayoffStrategy[SaverTraits, SaverProperties
             payoffs *= [draw if ag.properties.is_saver else 1 for ag in agents]
 
         return payoffs
-
-
-def init_saver_cooperation_strategy(
-    stochastic: bool = True,
-    differential_efficient: float = 0.15,
-    differential_inefficient: float = 0.05,
-) -> SaverCooperationPayoffStrategy:
-    """Initialize a cooperation strategy for saver agents with common defaults."""
-    return SaverCooperationPayoffStrategy(
-        stochastic=stochastic,
-        differential_efficient=differential_efficient,
-        differential_inefficient=differential_inefficient,
-    )

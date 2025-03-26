@@ -9,7 +9,7 @@ import networkx as nx
 import zstandard as zstd
 
 
-CURRENT_DIR = Path(__file__).parent.resolve()
+CURRENT_DIR = Path(__file__).resolve().parent
 CACHE_DIR = CURRENT_DIR / "cache"
 
 
@@ -21,34 +21,40 @@ class NetzDatabase:
 
     def get_file_name(
         self,
-        name: str,
+        network_name: str,
         net: str | None = None,
     ):
-        safe_name = name.lower().replace("-", "_").replace(" ", "_")
+        safe_name = network_name.lower().replace("-", "_").replace(" ", "_")
         safe_net = "_" + net.lower().replace("-", "_").replace(" ", "_") if net else ""
         return CACHE_DIR / f"{safe_name}{safe_net}.gt"
 
     def _download_file(
         self,
-        name: str,
+        network_name: str,
         net: str | None = None,
         base_url: str = "https://networks.skewed.de",
         replace: bool = False,
     ):
-        file_name = self.get_file_name(name, net)
+        file_name = self.get_file_name(network_name, net)
         temp_file = file_name.with_suffix(".tmp")
 
         if file_name.exists() and not replace:
             return  # File exists, nothing to do
 
         # retrieve data
-        net = net or name
-        url = f"/net/{name}/files/{net}.gt.zst"
+        net = net or network_name
+        url = base_url + f"/net/{network_name}/files/{net}.gt.zst"
         try:
             # Download to temporary file first
-            with request.urlopen(base_url + url) as http_f:
+            with request.urlopen(url) as http_f:
                 if http_f.status != 200:
-                    raise HTTPError(f"HTTP {http_f.status}: {http_f.reason}")
+                    raise HTTPError(
+                        url,
+                        http_f.status,
+                        f"HTTP {http_f.status}: {http_f.reason}",
+                        http_f.headers,
+                        http_f,
+                    )
 
                 dctx = zstd.ZstdDecompressor()
                 reader = dctx.stream_reader(http_f)
@@ -75,7 +81,7 @@ class NetzDatabase:
 
     def read_netzschleuder_network(
         self,
-        name: str,
+        network_name: str,
         net: str | None = None,
         base_url: str = "https://networks.skewed.de",
     ) -> nx.Graph:
@@ -84,7 +90,7 @@ class NetzDatabase:
 
         Parameters
         ----------
-        name : str
+        network_name : str
             Name of the network data sets to read from.
         net : str | None, optional
             Identifier of the subnetwork within the dataset to read. For data sets
@@ -97,10 +103,10 @@ class NetzDatabase:
             networkx.Graph
 
         """
-        file_name = self.get_file_name(name, net)
+        file_name = self.get_file_name(network_name, net)
 
         if not file_name.exists():
-            self._download_file(name, net, base_url=base_url)
+            self._download_file(network_name, net, base_url=base_url)
 
         with open(file_name, "rb") as f:
             data = f.read()

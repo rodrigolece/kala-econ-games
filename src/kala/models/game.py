@@ -1,5 +1,5 @@
 """Module defining the top-level classes of games that put everything together."""
-import itertools
+
 from typing import Generator, Generic, Mapping, Protocol, Sequence
 
 import networkx as nx
@@ -20,19 +20,19 @@ class GameState(Generic[Traits, Properties]):
     def __init__(
         self,
         graph: nx.Graph,
-        agents: list[Agent[Traits, Properties]],
+        agents: Sequence[Agent[Traits, Properties]],
         placements: AgentPlacement,
         payoff_strategy: PayoffStrategy[Traits, Properties],
         matching_strategy: MatchingStrategy[Traits, Properties],
     ):
         self.graph = graph
-        self.agents = agents
+        self.agents = list(agents)
         self.placements = placements
         self.payoff_strategy = payoff_strategy
         self.matching_strategy = matching_strategy
 
 
-# NB: this is placed here instead of shocks.py to avoid circular imports
+# NB: this is placed here instead of shocks.py to avoid circular imports
 class Shock(Protocol):
     def apply(self, state: GameState[Traits, Properties]) -> GameState[Traits, Properties]:
         """Apply the shock to the game (this modifies the game in place)."""
@@ -61,6 +61,7 @@ class GamePlan:
 
 # Game Logic Functions
 
+
 def play_match(
     agents: list[Agent[Traits, Properties]],
     payoff_strategy: PayoffStrategy,
@@ -70,19 +71,13 @@ def play_match(
     max_payoff = max(payoffs)
     # Returns a list of (agent, payoff, lost_match) tuples, where lost_match is
     # True if the agent received strictly less than the max payoff
-    return [
-        (agent, payoff, payoff < max_payoff) for agent, payoff in zip(agents, payoffs)
-    ]
+    return [(agent, payoff, payoff < max_payoff) for agent, payoff in zip(agents, payoffs)]
 
 
 def play_step(time: int, state: GameState):
     """This function determines how a game step is played out."""
     matches = state.matching_strategy.select_matches(state.placements, state.graph)
-    updates = [
-        payoff
-        for agents in matches
-        for payoff in play_match(agents, state.payoff_strategy)
-    ]
+    updates = [payoff for agents in matches for payoff in play_match(agents, state.payoff_strategy)]
     # For each agent, update its state based on the calculated payoff and
     # whether it received the minimum payoff in its match (lost_match).
     for agent, payoff, lost_match in updates:
@@ -115,16 +110,3 @@ def play_game(
         play_step(time, state)
 
         yield time, state
-
-def get_summed_score(state: GameState, filt: Sequence[bool] | None = None) -> float:
-    """Get the sum of the scores of all agents in the game."""
-    if filt is not None:
-        assert len(filt) == len(state.agents), "'filt' must be the same length as the number of agents"
-
-    agents = (
-        itertools.compress(state.agents, filt)
-        if filt is not None
-        else state.agents
-    )
-
-    return sum(a.score for a in agents)

@@ -3,10 +3,13 @@
 import networkx as nx
 import pytest
 
-from kala.models.agents import init_saver_agent
-from kala.models.game import GameState
-from kala.models.graphs import AgentPlacementNetX
-from kala.models.strategies import MatchingStrategy, SaverCooperationPayoffStrategy
+from kala import (
+    init_saver_agent,
+    GameState,
+    MatchingStrategy,
+    SaverCooperationPayoffStrategy,
+    AgentPlacementNetX,
+)
 
 
 @pytest.fixture(scope="function")

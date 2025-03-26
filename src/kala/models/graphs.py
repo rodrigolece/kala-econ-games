@@ -1,12 +1,13 @@
 """Module defining the interface for the underlying graphs."""
 
 import warnings
-from typing import Generator, Hashable, MutableMapping, Protocol
+from typing import Generator, Hashable, MutableMapping, Protocol, Sequence
 
 import networkx as nx
 import numpy as np
 
 from kala.models.agents import Agent, SaverAgent
+from kala.models.data import Properties, Traits
 
 
 NodeID = Hashable
@@ -72,7 +73,7 @@ class AgentPlacementNetX(AgentPlacement):
             yield (k, v)
 
     @classmethod
-    def init_bijection(cls, agents: list[Agent], graph: nx.Graph):
+    def init_bijection(cls, agents: Sequence[Agent[Traits, Properties]], graph: nx.Graph):
         """
         Initialise a new placement from a list of agents and a graph with the same size.
         """
@@ -85,11 +86,6 @@ class AgentPlacementNetX(AgentPlacement):
             placement.add_agent(agent, position)
 
         return placement
-
-
-def init_agent_placement(agents: list[Agent], graph: nx.Graph) -> AgentPlacementNetX:
-    """Initialize an agent placement from a list of agents and a graph."""
-    return AgentPlacementNetX.init_bijection(agents, graph)
 
 
 def get_neighbours(
