@@ -1,47 +1,49 @@
 """Test the agents module."""
 
+from uuid import UUID
+
 import numpy as np
 import pytest
 
-from kala.models.agents import InvestorAgent
-from kala.models.memory_rules import AverageMemoryRule
+from kala import SaverFlipAfterFractionLost, init_saver_agent
 
 
 NUM_GAMES = 5
 
 
 @pytest.fixture
-def simple_investor_agent():
-    """ "Simple investor agent."""
-    return InvestorAgent(is_saver=True)
+def saver_agent():
+    """Simple investor agent."""
+    return init_saver_agent(is_saver=True, memory_length=NUM_GAMES, update_rule=None)
 
 
-def test_init_of_simple_agent(simple_investor_agent):
-    """Test the init of an InvestorAgent."""
-    agent = simple_investor_agent
-    assert agent.is_saver()
+def test_init_of_saver_agent(saver_agent):
+    """Test the init of an SaverAgent."""
+    agent = saver_agent
+    assert agent.properties.is_saver
     assert hasattr(agent, "uuid")
-    assert isinstance(agent.uuid, str)
+    assert isinstance(agent.uuid, UUID)
 
-    agent.update(payoff=2)
-    assert agent.get_savings() == 2
-    agent.update(payoff=0.5)
-    assert agent.get_savings() == 2.5
+    agent.update(payoff=2, lost_match=False, time=0)
+    assert agent.score == 2
+    agent.update(payoff=0.5, lost_match=True, time=1)
+    assert agent.score == 2.5
 
 
 @pytest.fixture
-def memoried_investor_agent():
+def saver_agent_with_update_rule():
     """Investor agent with memory."""
-    update_rule = AverageMemoryRule(memory_length=NUM_GAMES)
-    return InvestorAgent(is_saver=False, update_rule=update_rule)
+    rule = SaverFlipAfterFractionLost(frac=0.5)
+    return init_saver_agent(is_saver=True, memory_length=NUM_GAMES, update_rule=rule)
 
 
-def test_init_of_memoried_agent(memoried_investor_agent):
-    """Test the memory init of an InvestorAgent."""
-    agent = memoried_investor_agent
-    a = np.array([False] * (NUM_GAMES - 1) + [True])
+def test_update_rule(saver_agent_with_update_rule):
+    """Test the update rule of a SaverAgent."""
+    agent = saver_agent_with_update_rule
+    a = np.array([True] * (NUM_GAMES - 1) + [False])
     expected_states = np.hstack((a, ~a))
 
+    # all matches will be lost and the agent will play twice as many games as its memory_length
     for i in range(2 * NUM_GAMES):
-        agent.update(payoff=1.0, match_lost=True)
-        assert agent.is_saver() == expected_states[i]
+        agent.update(payoff=1.0, lost_match=True, time=i)
+        assert agent.properties.is_saver == expected_states[i]

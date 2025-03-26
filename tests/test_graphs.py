@@ -1,97 +1,70 @@
 """Test the graphs module."""
 
-import networkx as nx
+import pytest
 
-from kala.models.agents import InvestorAgent
+from kala.models.agents import SaverAgent
+from kala.models.graphs import AgentPlacementNetX, get_neighbours
 
 
-def test_get_functions_by_agents(init_simple_graph):
-    """Test the methods get_node and get_neighbours and the return type of the node."""
-    G = init_simple_graph  # pylint: disable=invalid-name
+def test_get_agent_get_neighbours(
+    fixture_networkx_graph,
+    fixture_agent_placement,
+):
+    """Test the methods get_agent and get_neighbours."""
+    g = fixture_networkx_graph  # pylint: disable=invalid-name
+    plcmt = fixture_agent_placement
 
     # get_node using the identifier
-    n0 = G.get_node("a")  # type: ignore
-    assert isinstance(n0, InvestorAgent)
+    n0 = plcmt.get_agent(0)
+    assert isinstance(n0, SaverAgent)
 
-    neighs = G.get_neighbours(n0)
+    neighs = get_neighbours(n0, g, plcmt)
     assert len(neighs) == 2
-    assert all(isinstance(n, InvestorAgent) for n in neighs)
+    assert all(isinstance(n, SaverAgent) for n in neighs)
 
-    assert len(G.get_neighbors(G.get_node("c"))) == 3
-
-
-def test_get_functions_by_string(init_simple_graph):
-    """Test the methods get_node and get_neighbours using a string identifier."""
-    G = init_simple_graph  # pylint: disable=invalid-name
-
-    neighs = G.get_neighbours("a")
-    assert len(neighs) == 2
-    assert all(isinstance(n, InvestorAgent) for n in neighs)
-
-    assert len(G.get_neighbors("c")) == 3
+    n2 = plcmt.get_agent(2)
+    assert len(get_neighbours(n2, g, plcmt)) == 3
 
 
-def test_get_functions_by_pos(init_simple_graph):
-    """Test the methods get_node and get_neighbours using an integer (position)."""
-    G = init_simple_graph  # pylint: disable=invalid-name
+def test_get_position(fixture_saver_agents, fixture_networkx_graph, fixture_agent_placement):
+    """Test the method get_position."""
+    plcmt = fixture_agent_placement
+    g = fixture_networkx_graph  # pylint: disable=invalid-name
 
-    n0 = G.get_node(0)  # type: ignore
-    assert isinstance(n0, InvestorAgent)
-    assert n0.uuid == "a"
+    agent = fixture_saver_agents[2]
+    assert plcmt.get_position(agent) == 2
 
-    neighs = G.get_neighbours(0)
-    assert len(neighs) == 2
-    assert all(isinstance(n, InvestorAgent) for n in neighs)
-
-    assert len(G.get_neighbors(2)) == 3
+    neighs = get_neighbours(agent, g, plcmt)  # repeats test above
+    assert len(neighs) == 3
 
 
-def test_add_node(init_simple_graph):
-    """Test the method add_node."""
-    G = init_simple_graph  # pylint: disable=invalid-name
+def test_add_agent(fixture_saver_agents):
+    """Test the method add_agent."""
+    plcmt = AgentPlacementNetX()
+    for i, a in enumerate(fixture_saver_agents):
+        plcmt.add_agent(a, i)
 
-    # NB: we are not adding the nodes in order
-    agent = InvestorAgent(is_saver=False, uuid="g")
-    assert G.add_node(agent)
-    assert G.num_nodes() == 7
-
-    assert G.get_node(agent).uuid == "g"
-    assert G.get_node("g") == agent
-    assert G.get_node(6) == agent
-
-    assert G.add_node(agent) is False  # the second time it should fail
+    with pytest.raises(ValueError):
+        plcmt.add_agent(fixture_saver_agents[0], 0)  # already full
 
 
-def test_remove_node(init_simple_graph):
+def test_clear_node(fixture_networkx_graph, fixture_agent_placement):
     """Test the method remove_node."""
-    G = init_simple_graph  # pylint: disable=invalid-name
+    plcmt = fixture_agent_placement
 
-    # NB: we are not removing the nodes in order
-    assert G.remove_node("e")
-    assert G.num_nodes() == 5
+    agent = plcmt.get_agent(2)
+    neighs = get_neighbours(agent, fixture_networkx_graph, plcmt)
+    assert len(neighs) == 3
 
-    assert G.remove_node("f")
-    assert G.num_nodes() == 4
+    # Remove the RHS central node; this disconnects the two sides of the graph
+    plcmt.clear_node(3)
+    neighs = get_neighbours(agent, fixture_networkx_graph, plcmt)
+    assert len(neighs) == 2
 
-    assert G.remove_node("f") is False
+    # Remove one of the two remaining nodes on the RHS
+    agent = plcmt.get_agent(4)
+    plcmt.clear_node(4)
+    assert get_neighbours(agent, fixture_networkx_graph, plcmt) is None
 
-
-def test_add_edge(init_simple_graph):
-    """Test the method add_edge."""
-    G = init_simple_graph  # pylint: disable=invalid-name
-
-    assert G.add_edge("a", "b") is False  # the edge already exists
-    assert G.add_edge("a", "a") is False  # self-loops are not allowed
-    assert G.add_edge("a", "g") is False  # the node does not exist
-
-    assert G.add_edge("a", "d")
-    assert nx.number_of_edges(G._graph) == 8  # pylint: disable=protected-access
-
-
-def test_remove_edge(init_simple_graph):
-    """Test the method remove_edge."""
-    G = init_simple_graph  # pylint: disable=invalid-name
-
-    assert G.remove_edge("c", "d")
-    assert nx.number_of_edges(G._graph) == 6  # pylint: disable=protected-access
-    assert nx.is_connected(G._graph) is False  # pylint: disable=protected-access
+    # The remaining RHS node should be disconnected
+    assert get_neighbours(plcmt.get_agent(5), fixture_networkx_graph, plcmt) == []

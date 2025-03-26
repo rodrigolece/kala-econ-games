@@ -9,11 +9,117 @@ To begin with, we have used the framework to coded the model presented in *Ernst
 
 ## Installation
 
+The package is published to [PyPI](https://pypi.org/) and can be installed directly using
+
+```bash
+$ pip install kala-econ-games
+```
+
+
+## User guide
+
+The user-facing interface of the package is located under `kala.models` but the concrete classes have been added to the top-level package so that they can be imported directly.
+
+Before going into more detail, we'll give and comment a full example that creates a working game.
+
+We start with some imports
+
+```python
+from kala import (
+    GamePlan,
+    get_gini_coefficient,
+    get_saver_agents,
+    get_summed_score,
+    init_savers_gamestate_from_netz,
+    play_game,
+    shocks,
+)
+```
+We use [Networkx](https://networkx.org/) to define the network topologies. There are a great deal of real-world networks [the Netzschleuder repository](https://networks.skewed.de/) and these can be downloaded directly and a new game can be initialised using
+
+```python
+network_name = "dolphins"
+game = init_savers_gamestate_from_netz(network_name, savers_share=0.5, memory_length=4)
+agents = game.agents
+```
+
+We have implemented some shocks which are defined outside the game, and used as part of a `GamePlan`. A game and a game plan are passed directly to the `play_game` function which is the primary entry point to run the simulations. The game can be inspected directly (note for example the use of `game.agents`) and we provide some functions to retrieve basic statistics.
+
+```python
+shocks = {
+    4: [shocks.RemovePlayer(agents[2])],
+    6: [shocks.SwapRandomEdge()],
+}
+
+
+game_plan = GamePlan(10, shocks=shocks)
+
+for time, state in play_game(game, game_plan):
+    savers = get_saver_agents(state)
+    num_savers = len(savers)
+    total_score = get_summed_score(state.agents)
+    saver_score = get_summed_score(savers)
+    gini = get_gini_coefficient(state.agents)
+
+    print(f"Time {time}: num_agents={len(state.agents)}; num_savers={num_savers}")
+    print(f"\tTotal:  {round(total_score, 2)}")
+    print(f"\tSavers: {round(saver_score, 2)}")
+    print(f"\tGini:   {round(gini, 3)}")
+
+```
+
+---
+
+More generally, it can be useful to work directly with networks and these can be downloaded and converted to a NetworkX graph using the `NetzDatabase` interface.
+
+```python
+from kala import NetzDatabase
+
+db = NetzDatabase()
+graph = db.read_netzschleuder_network(network_name)
+```
+
+
+### Agents
+
+Agents should be the starting point of any model. Agents are created by passing arguments that are specific to the model, but that can be broken down into two categories (traits and properties). Once created, an agent should have all of the necessary information to call the `update()` method which for example adds a payoff to the running total of the agent.
+
+In order to implement the models in \[**Ernst04**\], we define the class `SaverAgent`. Typically, one would initialise an instance using the `init_saver_agent` function.
+
+#### Traits and properties
+
+Traits and properties belong to agents. Roughly speaking, traits were thought as fixed and properties as changing in time, but the distinction is no longer clear-cut and in the future we might decide to deprecate one of the two classes.
+
+#### Memory rules
+
+Agents that have a memory can change their properties in response to the interactions they have had in the last turns. We control how they behave using an update or memory rule. We have added support for a single rule at the moment (`SaverFlipAfterFractionLost`) but we plan to add support for more.
+
+### Graphs
+
+We use graphs directly from NetworkX, and we implement an `AgentPlacementNetX` which manages keeps track of where agents are placed in the Graph.
+
+
+### Strategies
+
+A strategy encodes what two agents should do when they "encounter" and they play each other. The main method exposed is `calculate_payoff()`.
+
+Following \[**Ernst04**\], we coded the class `SaverCooperationPayoffStrategy` which draws payoffs from a log-normal distribution with mean 1.0 and a variance (and therefore risk) that depends on the specialization of each agent.
+
+
+### Games
+
+A game (or more precisely a GameState) holds all the information of the graph, the agents, etc, at any given point.
+
+The main way to interect with a game is to define a `GamePlan` which defines the number of steps that the game will go on for (and possibly shocks are applied and when), and call `play_game`.
+
+
+## Contributing
+
 The package is written in Python (minimal version: 3.10).
 We recommend that the installation is made inside a virtual environment.
 While you can use `conda` or Python's built-in `venv`, we recommend `uv` ([https://docs.astral.sh/uv/](https://docs.astral.sh/uv/)).
 
-### Using `uv` (recommended)
+### Local install with `uv`
 
 If you don't have `uv` installed, follow the instructions on their [documentation](https://docs.astral.sh/uv/getting-started/installation/).
 Once `uv` is installed, navigate to the project's root directory and run:
@@ -41,175 +147,14 @@ $ uv run pytest tests/
 
 For more information on using `uv`, please refer to the [official documentation](https://docs.astral.sh/uv/).
 
-### Using Python's builtin `venv`
 
-The first step is running
-
-```bash
-$ python -m venv kala
-```
-
-This creates a folder that contains the virtual environment `kala` (a different name can be used; change below as appropriate). We activate it using
-
-```bash
-$ source kala/bin/activate
-```
-
-### Using conda
-
-The tool `conda`, which comes bundled with Anaconda has the advantage that it lets us specify the version of Python that we want to use. Python>=3.10 is required.
-
-A new environment can be created with
-
-```bash
-$ conda create -n kala python=3.10 -y
-```
-
-Like before, the environment's name can be anything else instead of `kala` (simply change the name below). We activate it using
-
-```bash
-$ conda activate kala
-```
-
-### Local install of the package
+#### Local install of the package
 
 Once we are working inside an active virtual environment, we install (the dependencies and) the package by running
 
 ```bash
-[$ pip install -r requirements.txt]
 $ pip install -e .
 ```
-
-### Coming soon
-
-In the future, we would like to completely package the code and publish it in [PyPI](https://pypi.org/) so that a local installation isn't needed any more, and the installation can be solved directly by the package manager of choice.
-
-
-## User guide
-
-The user-facing interface of the package is located under `kala.models` but the concrete classes have been added to the top-level package so that they can be imported directly.
-
-Before going into more detail, we'll give and comment a full example that creates a working game.
-
-We start with 3 imports
-
-```python
-import networkx as nx
-from kala import InvestorAgent, CooperationStrategy, DiscreteTwoByTwoGame, SimpleGraph
-```
-
-We've imported [Networkx](https://networkx.org/) as a handy tool to create a pre-defined network from which we "steal" the edges, but other ways of creating graph topologies will be supported in the future.
-
-The first step is defining the agents.
-
-```python
-num_nodes = 10
-
-# A list of InvestorAgents, half of them savers and half non-savers
-is_saver = savers = [True, False] * 5
-agents = [InvestorAgent(is_saver=is_saver[i]) for i in range(num_nodes)]
-```
-
-Next, we create a network (with NetworkX) and we instantiate our own `SimpleGraph` which can take a NetworkX object as argument. We also pass the agents so that there is a one-to-one mapping between the nodes in the graph and the individual agents.
-
-```python
-g = nx.barabasi_albert_graph(num_nodes, 8, seed=0)
-G = SimpleGraph(g, nodes=agents)
-```
-
-We initialise a strategy
-
-```python
-coop = CooperationStrategy(
-    stochastic=True,  # True to draw random numbers
-    differential_efficient=0.5,  # eta_hat_hat = 1 + differential_efficient
-    differential_inefficient=0.05,  # eta_hat = 1 - differential_inefficient
-    rng=0,  # this seeds the random number generator (not needed in general)
-)
-```
-
-and then we combine the graph (which already encompasses the agents) and the strategy into a game.
-
-```python
-game = DiscreteTwoByTwoGame(G, coop)
-```
-
-All we need to do now is call a method and, if we want, keep track of different properties like so:
-
-```python
-for _ in range(10):
-    game.play_round()
-    wealth, num_savers = game.get_total_wealth(), game.get_num_savers()
-    print(f"wealth={wealth:.2f}, {num_savers=}")
-```
-
----
-
-More complicated configurations can be added in several places. For example, we can create agents that have memory, an update rule, and some amount of homophily by calling
-
-
-```python
-from kala import FractionMemoryRule
-
-agents = [
-    InvestorAgent(
-        is_saver=is_saver[i],
-        update_rule=FractionMemoryRule(fraction=0.75, memory_length=5),
-        homophily=0.8
-    )
-    for i in range(num_nodes)
-]
-```
-
-
-
-### Agents
-
-Agents should be the starting point of any model. Agents are created by passing arguments that are specific to the model, but that can be broken down into two categories (traits and properties). Once created, an agent should have all of the necessary information to call the `update()` method which for example adds a payoff to the running total of the agent.
-
-In order to implement the models in \[**Ernst04**\], we define the class `InvestorAgent` which takes the following arguments:
-
-- `is_saver`: Boolean indicating whether the agent is a saver or not. This trait is important because it will influence the payoff that our agent will get once they play an opponent that can have the same trait or not.
-- `homophily`: Normally, agents are paired using the topology of a graph in which they are the nodes. The homophily is an optional probability (a number between [0, 1]) which controls whether agents should preferentially select opponents with the same trait or avoid them entirely.
-- `update_rule`: A rule which codifies what the agent should do with the outcome of previous `memory_length` (`n`) games. Normally, an agent records whether their payoff has been smaller than that of its opponent, so they might decide to change their saver trait after loosing half of the `n` games, or all `n` games.
-
-
-#### Traits and properties
-
-Traits and properties belong to agents. Roughly speaking, traits were thought as fixed and properties as changing in time, but the distinction is no longer clear-cut and in the future we might decide to deprecate one of the two classes.
-
-#### Memory rules
-
-Rules also belong to agents. They handle all the logic of deciding whether the agent should flip its saving strategy based on the past `n` games. The following rules are available (ordered from simplest to most general):
-
-- `AnyPastMemoryRule`
-- `AllPastMemoryRule`
-- `AverageMemoryRule`
-- `FractionMemoryRule`
-- `WeightedMemoryRule`
-
-A description of the rules will follow shortly.
-
-### Graphs
-
-Agents are initialised and organised inside a `SimpleGraph` which encodes the topology, that is, the connections of agents. For the time being, the connections are fixed but in the future this can easily be extended so that edges can be re-wired as a game progresses.
-
-### Strategies
-
-A strategy encodes what two agents should do when they "encounter" and they play each other. The main method exposed is `calculate_payoff()`.
-
-Following \[**Ernst04**\], we coded the class `CooperationStrategy` which draws payoffs from a log-normal distribution with mean 1.0 and a variance (and therefore risk) that depends on the specialization of each agent. The specialization depends the two values:
-
-- `differential_inefficient`: When a saver meets a non-saver, their specialization is set to `1 - differential_inefficient` which in the paper's notation is $\hat{\eta}$.
-- `differential_efficient`:  When two savers play each other, they decide to cooperate and they select a higher specialization set to `1 + differential_efficient` ($\hat{\hat{\eta}}$ in the paper).
-
-### Games
-
-A game is defined by the graph (which itself already contains initialised agents) and the strategy. It handles the logic of matching two (or more) opponents calculating and distributing the payoffs. The most important method is `play_round()`, but there are also convenient methods to get summaries such as `get_total_wealth()` or `get_num_savers()`.
-
-In order to implement the models \[**Ernst04**\], we use `DiscreteTwoByTwoGame`.
-
-## Contributing
 
 ### Development Environment
 
@@ -265,17 +210,3 @@ just test
 ```
 
 If the `just` command passes locally, it's highly likely that the automated CI/CD pipeline on GitHub will also pass.
-
-
-### Extending the existing models
-
-In all cases, we define a base class which can be extended easily to define new models. For example, one could define a new set of agent "traits" like so:
-
-```python
-class MyNewTraits(BaseAgentTraits):
-    color: str
-    age: int
-    is_tall: bool
-```
-
-When possible, we have have strived to make all such sub-classes interoperable meaning that other parts of the code tend not to assume any functionality other than the one specified in the base class (there are exceptions to this but are working on getting around them).

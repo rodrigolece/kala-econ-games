@@ -1,15 +1,9 @@
 """Test the shocks module."""
 
+from kala.models.graphs import get_neighbours
 from kala.models.shocks import (
     AddEdge,
     AddRandomEdge,
-    ChangeDifferentialEfficient,
-    ChangeDifferentialInefficient,
-    FlipAllSavers,
-    FlipRandomSaver,
-    FlipSaver,
-    FlipSavers,
-    HomogenizeSaversTo,
     RemoveEdge,
     RemovePlayer,
     RemoveRandomEdge,
@@ -19,173 +13,109 @@ from kala.models.shocks import (
 )
 
 
-def test_remove_player(init_deterministic_game):
+def test_remove_player(fixture_game_state):
     """Test the RemovePlayer shock."""
-    game = init_deterministic_game
+    game = fixture_game_state
+    agents = game.agents
 
-    RemovePlayer("a").apply(game)
+    # Remove the LHS central node; this disconnects the two sides of the graph
+    RemovePlayer(agents[2]).apply(game)
+    assert game.graph.number_of_nodes() == 6
+    assert len(game.agents) == 5
 
-    assert game.graph.num_nodes() == 5
-    assert game.graph.num_edges() == 5
+    # after removing agent, the agents coming after are shifted down
+    # we test that the RHS is still connected
+    neighs = get_neighbours(agents[2], game.graph, game.placements)  # NB: [3] is now [2]
+    for n in neighs:
+        print(f"neigh: {str(n.uuid)[:8]}")
+    assert len(neighs) == 2
 
-    RemovePlayer("c").apply(game)
+    # Remove one of the two remaining nodes on the LHS
+    a = agents[0]
+    RemovePlayer(a).apply(game)
 
-    assert game.graph.num_nodes() == 4
-    assert game.graph.num_edges() == 3
+    assert game.graph.number_of_nodes() == 6
+    assert len(game.agents) == 4
+    assert get_neighbours(a, game.graph, game.placements) is None
+
+    # The last LHS node shoudl be disconnected
+    assert get_neighbours(agents[0], game.graph, game.placements) == []
 
 
-def test_remove_random_player(init_deterministic_game):
+def test_remove_random_player(fixture_game_state):
     """Test the RemoveRandomPlayer shock."""
-    game = init_deterministic_game
+    game = fixture_game_state
 
-    RemoveRandomPlayer(rng=0).apply(game)
+    RemoveRandomPlayer().apply(game)
 
-    assert game.graph.num_nodes() == 5
-
-
-def test_remove_edge(init_deterministic_game):
-    """Test the RemoveEdge shock."""
-    game = init_deterministic_game
-
-    RemoveEdge("c", "d").apply(game)
-
-    assert game.graph.num_nodes() == 6
-    assert game.graph.num_edges() == 6
+    assert game.graph.number_of_nodes() == 6
+    assert len(game.agents) == 5
 
 
-def test_remove_random_edge(init_deterministic_game):
-    """Test the RemoveRandomEdge shock."""
-    game = init_deterministic_game
-
-    RemoveRandomEdge(rng=0).apply(game)
-
-    assert game.graph.num_edges() == 6
-
-
-def test_swap_edge(init_deterministic_game):
-    """Test the SwapEdge shock."""
-    game = init_deterministic_game
-
-    SwapEdge("c", "d", "e").apply(game)
-
-    assert game.graph.num_nodes() == 6
-    assert game.graph.num_edges() == 7
-
-
-def test_swap_random_edge(init_deterministic_game):
-    """Test the SwapRandomEdge shock."""
-    game = init_deterministic_game
-
-    SwapRandomEdge(rng=0).apply(game)
-
-    assert game.graph.num_nodes() == 6
-    assert game.graph.num_edges() == 7
-
-
-def test_add_edge(init_deterministic_game):
+def test_add_edge(fixture_game_state):
     """Test the AddEdge shock."""
-    game = init_deterministic_game
+    game = fixture_game_state
+    agents = game.agents
 
-    AddEdge("a", "f").apply(game)
+    a = agents[0]
+    AddEdge(a, agents[-1]).apply(game)
 
-    assert game.graph.num_nodes() == 6
-    assert game.graph.num_edges() == 8
-    assert game.graph.get_node("f") in game.graph.get_neighbours("a")
+    assert game.graph.number_of_nodes() == 6
+    assert game.graph.number_of_edges() == 8
+
+    assert agents[-1] in get_neighbours(a, game.graph, game.placements)
 
 
-def test_add_random_edge(init_deterministic_game):
+def test_add_random_edge(fixture_game_state):
     """Test the AddRandomEdge shock."""
 
-    game = init_deterministic_game
+    game = fixture_game_state
 
     AddRandomEdge().apply(game)
 
-    assert game.graph.num_nodes() == 6
-    assert game.graph.num_edges() == 8
+    assert game.graph.number_of_nodes() == 6
+    assert game.graph.number_of_edges() == 8
 
 
-def test_flip_random_saver(init_deterministic_game):
-    """Test the FlipRandomSaver shock."""
+def test_remove_edge(fixture_game_state):
+    """Test the RemoveEdge shock."""
+    game = fixture_game_state
+    agents = game.agents
 
-    game = init_deterministic_game
-    initial_number_of_savers = game.get_num_savers()
+    RemoveEdge(agents[2], agents[3]).apply(game)
 
-    FlipRandomSaver(rng=0).apply(game)
-
-    assert game.get_num_savers() != initial_number_of_savers
-
-
-def test_flip_saver(init_deterministic_game):
-    """Test the FlipSaver shock."""
-
-    game = init_deterministic_game
-
-    initial_number_of_savers = game.get_num_savers()
-    FlipSaver("a").apply(game)
-    number_of_savers = game.get_num_savers()
-
-    assert number_of_savers != initial_number_of_savers
+    assert game.graph.number_of_nodes() == 6
+    assert game.graph.number_of_edges() == 6
+    assert agents[3] not in get_neighbours(agents[2], game.graph, game.placements)
 
 
-def test_flip_all_savers(init_deterministic_game):
-    """Test the FlipAllSavers shock."""
+def test_remove_random_edge(fixture_game_state):
+    """Test the RemoveRandomEdge shock."""
+    game = fixture_game_state
 
-    game = init_deterministic_game
+    RemoveRandomEdge().apply(game)
 
-    players = game.get_num_players()
-    initial_number_of_savers = game.get_num_savers()
-    initial_number_of_non_savers = players - initial_number_of_savers
-
-    FlipAllSavers().apply(game)
-
-    new_number_of_savers = game.get_num_savers()
-    new_number_number_of_non_savers = players - new_number_of_savers
-
-    assert new_number_of_savers == initial_number_of_non_savers
-    assert new_number_number_of_non_savers == initial_number_of_savers
+    assert game.graph.number_of_nodes() == 6
+    assert game.graph.number_of_edges() == 6
 
 
-def test_flip_savers(init_deterministic_game):
-    """Test the FlipSavers shock."""
+def test_swap_edge(fixture_game_state):
+    """Test the SwapEdge shock."""
+    game = fixture_game_state
+    agents = game.agents
 
-    game = init_deterministic_game
-    list_players = ["a", "f"]
+    SwapEdge(agents[2], agents[3], agents[4]).apply(game)
 
-    is_saver_a = game.graph.get_node("a").is_saver
-    is_saver_f = game.graph.get_node("f").is_saver
-
-    FlipSavers(list_players).apply(game)
-
-    assert game.graph.get_node("a").is_saver is not is_saver_a
-    assert game.graph.get_node("f").is_saver is not is_saver_f
+    assert game.graph.number_of_nodes() == 6
+    assert game.graph.number_of_edges() == 7
+    assert agents[4] in get_neighbours(agents[2], game.graph, game.placements)
 
 
-def test_homogenize_savers_to(init_deterministic_game):
-    """Test the HomogenizeSaversTo shock."""
+def test_swap_random_edge(fixture_game_state):
+    """Test the SwapRandomEdge shock."""
+    game = fixture_game_state
 
-    game = init_deterministic_game
+    SwapRandomEdge().apply(game)
 
-    HomogenizeSaversTo(True).apply(game)
-    assert game.get_num_savers() == game.get_num_players()
-
-    HomogenizeSaversTo(False).apply(game)
-    assert game.get_num_savers() == 0
-
-
-def test_change_differential_efficient(init_deterministic_game):
-    """Test the ChangeDifferentialEfficient shock."""
-    game = init_deterministic_game
-
-    ChangeDifferentialEfficient(0).apply(game)
-
-    assert game.strategy.payoff_matrix[("saver", "saver")] == (1.0, 1.0)
-
-
-def test_change_differential_inefficient(init_deterministic_game):
-    """Test the ChangeDifferentialInefficient shock."""
-    game = init_deterministic_game
-
-    ChangeDifferentialInefficient(0.5).apply(game)
-
-    assert game.strategy.payoff_matrix[("saver", "non-saver")] == (0.5, 1.0)
-    assert game.strategy.payoff_matrix[("non-saver", "saver")] == (1.0, 0.5)
+    assert game.graph.number_of_nodes() == 6
+    assert game.graph.number_of_edges() == 7

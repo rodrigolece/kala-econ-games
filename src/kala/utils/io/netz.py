@@ -9,62 +9,79 @@ import networkx as nx
 import zstandard as zstd
 
 
-CURRENT_DIR = Path(__file__).parent.resolve()
+CURRENT_DIR = Path(__file__).resolve().parent
 CACHE_DIR = CURRENT_DIR / "cache"
 
 
 class NetzDatabase:
-    def __init__(self):
+    def __init__(self, max_cache_size_bytes: int = 1024 * 1024 * 1024):  # 1GB default
+        self.max_cache_size = max_cache_size_bytes
         if not CACHE_DIR.exists():
-            CACHE_DIR.mkdir()
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
     def get_file_name(
         self,
-        name: str,
+        network_name: str,
         net: str | None = None,
     ):
-        safe_name = name.lower().replace("-", "_").replace(" ", "_")
+        safe_name = network_name.lower().replace("-", "_").replace(" ", "_")
         safe_net = "_" + net.lower().replace("-", "_").replace(" ", "_") if net else ""
         return CACHE_DIR / f"{safe_name}{safe_net}.gt"
 
     def _download_file(
         self,
-        name: str,
+        network_name: str,
         net: str | None = None,
         base_url: str = "https://networks.skewed.de",
         replace: bool = False,
     ):
-        """Note: the code was modified from pathpy."""
-
-        file_name = self.get_file_name(name, net)
+        file_name = self.get_file_name(network_name, net)
+        temp_file = file_name.with_suffix(".tmp")
 
         if file_name.exists() and not replace:
-            raise FileExistsError
-
-        # retrieve network properties
-        url = f"/api/net/{name}"
-        # properties = json.loads(request.urlopen(base_url + url).read())
+            return  # File exists, nothing to do
 
         # retrieve data
-        net = net or name
-        url = f"/net/{name}/files/{net}.gt.zst"
+        net = net or network_name
+        url = base_url + f"/net/{network_name}/files/{net}.gt.zst"
         try:
-            http_f = request.urlopen(base_url + url)
-        except HTTPError:
-            msg = f"Could not connect to netzschleuder repository at {base_url}"
-            raise Exception(msg)
+            # Download to temporary file first
+            with request.urlopen(url) as http_f:
+                if http_f.status != 200:
+                    raise HTTPError(
+                        url,
+                        http_f.status,
+                        f"HTTP {http_f.status}: {http_f.reason}",
+                        http_f.headers,
+                        http_f,
+                    )
 
-        # decompress data
-        dctx = zstd.ZstdDecompressor()
-        reader = dctx.stream_reader(http_f)
-        decompressed = reader.readall()
+                dctx = zstd.ZstdDecompressor()
+                reader = dctx.stream_reader(http_f)
+                decompressed = reader.readall()
 
-        with open(file_name, "wb") as f:
-            f.write(decompressed)
+                self._ensure_cache_space(len(decompressed))
+
+                with open(temp_file, "wb") as f:
+                    f.write(decompressed)
+
+                # Atomic replace - will fail if another process beat us to it
+                try:
+                    temp_file.replace(file_name)
+                except FileExistsError:
+                    if not replace:
+                        return  # Another process created the file, that's fine
+                    raise  # If replace=True, propagate the error
+
+        except Exception as e:
+            # Clean up temp file if something went wrong
+            if temp_file.exists():
+                temp_file.unlink()
+            raise e
 
     def read_netzschleuder_network(
         self,
-        name: str,
+        network_name: str,
         net: str | None = None,
         base_url: str = "https://networks.skewed.de",
     ) -> nx.Graph:
@@ -73,7 +90,7 @@ class NetzDatabase:
 
         Parameters
         ----------
-        name : str
+        network_name : str
             Name of the network data sets to read from.
         net : str | None, optional
             Identifier of the subnetwork within the dataset to read. For data sets
@@ -86,10 +103,10 @@ class NetzDatabase:
             networkx.Graph
 
         """
-        file_name = self.get_file_name(name, net)
+        file_name = self.get_file_name(network_name, net)
 
         if not file_name.exists():
-            self._download_file(name, net, base_url=base_url)
+            self._download_file(network_name, net, base_url=base_url)
 
         with open(file_name, "rb") as f:
             data = f.read()
@@ -98,6 +115,16 @@ class NetzDatabase:
         edgelist = parse_graphtool_format_to_edgelist(data)
 
         return nx.Graph(edgelist, create_using=nx.Graph)  # return g as an undirected graph
+
+    def _ensure_cache_space(self, needed_bytes: int) -> None:
+        """Check if there's enough space for the new file, raise error if not."""
+        total_size = sum(f.stat().st_size for f in CACHE_DIR.glob("*") if f.is_file())
+        if total_size + needed_bytes > self.max_cache_size:
+            msg = (
+                f"Cache directory would exceed size limit of {self.max_cache_size / 1024 / 1024:.1f}MB. "
+                f"Please manually clean the cache at:\n{CACHE_DIR}"
+            )
+            raise RuntimeError(msg)
 
 
 def parse_graphtool_format_to_edgelist(data: bytes) -> list:

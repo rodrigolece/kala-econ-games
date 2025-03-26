@@ -1,283 +1,215 @@
 """Module defining different types of shocks."""
 
-from abc import ABC, abstractmethod
-from typing import Sequence
-
 import numpy as np
-from numpy.random import Generator
 
-from kala.models.agents import AgentT
-from kala.models.game import DiscreteGameT
-from kala.utils.config import DEBUG
-
-
-class BaseShock(ABC):
-    """
-    Base shock meant to be subclassed.
-
-    """
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}()"
-
-    def __repr__(self) -> str:
-        return f"<{str(self)}>"
-
-    @abstractmethod
-    def apply(self, game: DiscreteGameT) -> None:
-        """Apply the shock to the game (this modifies the game in place)."""
+from kala.models.agents import Agent
+from kala.models.game import GameState, Shock
+from kala.settings import DEBUG
 
 
-class RemovePlayer(BaseShock):
+class RemovePlayer(Shock):
     """Remove a specific player from the game."""
 
-    def __init__(self, node: AgentT | int | str):
-        self.node = node
+    def __init__(self, agent: Agent):
+        self.agent = agent
 
-    def apply(self, game: DiscreteGameT):
-        node = game.graph.get_node(self.node) if isinstance(self.node, int | str) else self.node
-        if DEBUG and node is None:
-            print("node not found; passing")
-            return
+    def apply(self, state: GameState) -> GameState:
+        node = state.placements.get_position(self.agent)
+        if node is None:
+            if DEBUG:
+                print("node not found; passing")
+            return state
 
         if DEBUG:
-            print("removing player", node)
-        game.graph.remove_node(node)
+            print("removing player", self.agent.uuid)
+
+        state.placements.clear_node(node)
+        for i, agent in enumerate(state.agents):
+            if agent.uuid == self.agent.uuid:
+                state.agents.pop(i)
+                break
+
+        return state
 
 
-class RemoveRandomPlayer(BaseShock):
+class RemoveRandomPlayer(Shock):
     """Remove a player selected at random from the game."""
 
-    def __init__(self, rng: Generator | int | None = None):
-        self.rng = np.random.default_rng(rng)
+    def apply(self, state: GameState) -> GameState:
+        rng = np.random.default_rng()
+        node = rng.choice(state.graph, size=1)[0]
+        agent = state.placements.get_agent(node)
 
-    def apply(self, game: DiscreteGameT):
-        node = game.graph.select_random_node(rng=self.rng)
-        if DEBUG:
-            print("removing player", node)
-        game.graph.remove_node(node)
-
-
-class RemoveEdge(BaseShock):
-    """Remove a specific edge from the game."""
-
-    def __init__(self, u: AgentT | int | str, v: AgentT | int | str):
-        self.u = u
-        self.v = v
-
-    def apply(self, game: DiscreteGameT):
-        u = game.graph.get_node(self.u) if isinstance(self.u, int | str) else self.u
-        v = game.graph.get_node(self.v) if isinstance(self.v, int | str) else self.v
-        if DEBUG:
-            print(f"removing edge ({u}, {v})")
-        game.graph.remove_edge(u, v)
-
-
-class RemoveRandomEdge(BaseShock):
-    """Remove an edge selected at random from the game."""
-
-    def __init__(self, rng: Generator | int | None = None):
-        self.rng = np.random.default_rng(rng)
-
-    def apply(self, game: DiscreteGameT):
-        u = game.graph.select_random_node(rng=self.rng)
-        v = game.graph.select_random_neighbour(u, rng=self.rng)
-
-        if v is not None:
+        if agent is None:
             if DEBUG:
-                print(f"removing edge ({u}, {v})")
-            game.graph.remove_edge(u, v)
+                print("node not found; passing")
+            return state
 
-
-class SwapEdge(BaseShock):
-    """Swap an edge in the game."""
-
-    def __init__(self, pivot_u: AgentT | int | str, v: AgentT | int | str, w: AgentT | int | str):
-        self.pivot_u = pivot_u
-        self.v = v
-        self.w = w
-
-    def apply(self, game: DiscreteGameT):
         if DEBUG:
-            print(f"swapping edge: ({self.pivot_u}, {self.v}) -> ({self.pivot_u}, {self.w})")
+            print("removing player", agent.uuid)
 
-        game.graph.remove_edge(self.pivot_u, self.v)
-        game.graph.add_edge(self.pivot_u, self.w)
-
-
-class SwapRandomEdge(BaseShock):
-    """Swap an edge selected at random from the game."""
-
-    def __init__(self, max_attempts: int = 10, rng: Generator | int | None = None):
-        self.max_attempts = max_attempts
-        self.rng = np.random.default_rng(rng)
-
-    def apply(self, game: DiscreteGameT):
-        pivot_u = game.graph.select_random_node(rng=self.rng)
-        neighs = game.graph.get_neighbours(pivot_u)
-        v = game.graph.select_random_neighbour(pivot_u, rng=self.rng)
-
-        w = pivot_u
-        attempts = 0
-        while w == pivot_u or w in neighs:
-            if attempts == self.max_attempts:
-                v = None  # don't take any action
+        state.placements.clear_node(node)
+        for i, a in enumerate(state.agents):
+            if a.uuid == agent.uuid:
+                state.agents.pop(i)
                 break
-            w = game.graph.select_random_node(rng=self.rng)
-            attempts += 1
 
-        if v is not None:
-            if DEBUG:
-                print(f"swapping edge: ({pivot_u}, {v}) -> ({pivot_u}, {w})")
-            game.graph.remove_edge(pivot_u, v)
-            game.graph.add_edge(pivot_u, w)
+        return state
 
 
-class AddEdge(BaseShock):
+class AddEdge(Shock):
     """Add an edge in the game."""
 
-    def __init__(self, u: AgentT | int | str, v: AgentT | int | str):
-        self.u = u
-        self.v = v
+    def __init__(self, agent_u: Agent, agent_v: Agent):
+        self.agent_u = agent_u
+        self.agent_v = agent_v
 
-    def apply(self, game: DiscreteGameT):
+    def apply(self, state: GameState) -> GameState:
+        node_u = state.placements.get_position(self.agent_u)
+        node_v = state.placements.get_position(self.agent_v)
+
+        if node_u is None or node_v is None:
+            if DEBUG:
+                print("one or both nodes not found; passing")
+            return state
+
         if DEBUG:
-            print(f"Adding edge: ({self.u}, {self.v})")
+            print(f"Adding edge: ({node_u}, {node_v})")
 
-        game.graph.add_edge(self.u, self.v)
+        state.graph.add_edge(node_u, node_v)
+        return state
 
 
-class AddRandomEdge(BaseShock):
+class AddRandomEdge(Shock):
     """Add an edge selected at random from the game."""
 
-    def __init__(self, max_attempts: int = 10, rng: Generator | int | None = None):
+    def __init__(self, max_attempts: int = 10):
         self.max_attempts = max_attempts
-        self.rng = np.random.default_rng(rng)
 
-    def apply(self, game: DiscreteGameT):
-        u = game.graph.select_random_node(rng=self.rng)
-        neighs = game.graph.get_neighbours(u)
+    def apply(self, state: GameState) -> GameState:
+        rng = np.random.default_rng()
+        node_u = rng.choice(list(state.graph), size=1)[0]
+        neighbors = list(state.graph.neighbors(node_u))
 
-        v = u
+        node_v = node_u
         attempts = 0
-        while v == u or v in neighs:
+        while node_v == node_u or node_v in neighbors:
             if attempts == self.max_attempts:
-                v = None  # don't take any action
+                node_v = None  # don't take any action
                 break
-            v = game.graph.select_random_node(rng=self.rng)
+            node_v = rng.choice(list(state.graph), size=1)[0]
             attempts += 1
 
-        if v is not None:
+        if node_v is not None:
             if DEBUG:
-                print(f"Adding edge: ({u}, {v})")
-            game.graph.add_edge(u, v)
+                print(f"Adding edge: ({node_u}, {node_v})")
+            state.graph.add_edge(node_u, node_v)
+
+        return state
 
 
-class FlipSaver(BaseShock):
-    """Flip an agent's saving trait."""
+class RemoveEdge(Shock):
+    """Remove a specific edge from the game."""
 
-    def __init__(self, node: AgentT | int | str):
-        self.node = node
+    def __init__(self, agent_u: Agent, agent_v: Agent):
+        self.agent_u = agent_u
+        self.agent_v = agent_v
 
-    def apply(self, game: DiscreteGameT):
-        node = game.graph.get_node(self.node)
-        node.flip_saver_property()
+    def apply(self, state: GameState) -> GameState:
+        node_u = state.placements.get_position(self.agent_u)
+        node_v = state.placements.get_position(self.agent_v)
 
+        if node_u is None or node_v is None:
+            if DEBUG:
+                print("one or both nodes not found; passing")
+            return state
 
-class FlipRandomSaver(BaseShock):
-    """Flip a random agent's saving trait."""
+        if DEBUG:
+            print(f"removing edge ({node_u}, {node_v})")
 
-    def __init__(self, rng: Generator | int | None = None):
-        self.rng = np.random.default_rng(rng)
-
-    def apply(self, game: DiscreteGameT):
-        node = game.graph.select_random_node(rng=self.rng)
-        node.flip_saver_property()
-
-
-class FlipSavers(BaseShock):
-    """Flip agents' saving traits from Sequence."""
-
-    def __init__(self, list_of_agents: Sequence[AgentT | int | str]):
-        self.list_of_agents = list_of_agents
-
-    def apply(self, game: DiscreteGameT):
-        for agent in self.list_of_agents:
-            node = game.graph.get_node(agent)
-            node.flip_saver_property()
+        state.graph.remove_edge(node_u, node_v)
+        return state
 
 
-class FlipAllSavers(BaseShock):
-    """Flip all savers in a game."""
+class RemoveRandomEdge(Shock):
+    """Remove an edge selected at random from the game."""
 
-    def apply(self, game: DiscreteGameT):
-        for node in game.graph.get_nodes():
-            node.flip_saver_property()
+    def apply(self, state: GameState) -> GameState:
+        rng = np.random.default_rng()
+        node_u = rng.choice(state.graph, size=1)[0]
+        neighbors = list(state.graph.neighbors(node_u))
 
+        if not neighbors:
+            if DEBUG:
+                print("no neighbors found; passing")
+            return state
 
-class HomogenizeSaversTo(BaseShock):
-    """Shock to homogenize savers to a given target trait."""
+        node_v = rng.choice(neighbors, size=1)[0]
 
-    def __init__(self, target: bool):
-        self.target = target
+        if DEBUG:
+            print(f"removing edge ({node_u}, {node_v})")
 
-    def apply(self, game: DiscreteGameT):
-        filt = game.create_filter_from_property("is_saver", self.target)
-
-        for agent, val in enumerate(filt):
-            if not val:
-                node = game.graph.get_node(agent)
-                node.flip_saver_property()
-
-
-class ChangeRandomPlayerMemoryLength(BaseShock):
-    """Shock to change the memory length of a random agent."""
-
-    def __init__(self, new_memory_length: int, rng: Generator | int | None = None):
-        self.memory_length = new_memory_length
-        self.rng = rng
-
-    def apply(self, game: DiscreteGameT):
-        node = game.graph.select_random_node(rng=self.rng)
-        node.change_memory_length(self.memory_length)
+        state.graph.remove_edge(node_u, node_v)
+        return state
 
 
-class ChangeAllPlayersMemoryLength(BaseShock):
-    """Shock to change all players memory with an integer or a list of integers."""
+class SwapEdge(Shock):
+    """Swap an edge in the game."""
 
-    def __init__(self, new_memory_length: int | Sequence[int]):
-        self.memory_length = new_memory_length
+    def __init__(self, pivot_u: Agent, agent_v: Agent, agent_w: Agent):
+        self.pivot_u = pivot_u
+        self.agent_v = agent_v
+        self.agent_w = agent_w
 
-    def apply(self, game: DiscreteGameT):
-        num_players = game.get_num_players()
+    def apply(self, state: GameState) -> GameState:
+        node_u = state.placements.get_position(self.pivot_u)
+        node_v = state.placements.get_position(self.agent_v)
+        node_w = state.placements.get_position(self.agent_w)
 
-        if isinstance(self.memory_length, int):
-            for node in game.graph.get_nodes():
-                node.change_memory_length(self.memory_length)
-        else:
-            assert len(self.memory_length) == num_players
-            for i, node in enumerate(game.graph.get_nodes()):
-                node.change_memory_length(self.memory_length[i])
+        if node_u is None or node_v is None or node_w is None:
+            if DEBUG:
+                print("one or more nodes not found; passing")
+            return state
 
+        if DEBUG:
+            print(f"swapping edge: ({node_u}, {node_v}) -> ({node_u}, {node_w})")
 
-class ChangeDifferentialEfficient(BaseShock):
-    """Shock to change the differential efficient parameter of the game strategy."""
-
-    def __init__(self, new_differential_efficient: float):
-        self.differential_efficient = new_differential_efficient
-
-    def apply(self, game: DiscreteGameT):
-        payoff_ss = 1 + self.differential_efficient
-        game.strategy.payoff_matrix[("saver", "saver")] = (payoff_ss, payoff_ss)
+        state.graph.remove_edge(node_u, node_v)
+        state.graph.add_edge(node_u, node_w)
+        return state
 
 
-class ChangeDifferentialInefficient(BaseShock):
-    """Shock to change the differential inefficient parameter of the game strategy."""
+class SwapRandomEdge(Shock):
+    """Swap an edge selected at random from the game."""
 
-    def __init__(self, new_differential_inefficient: float):
-        self.differential_inefficient = new_differential_inefficient
+    def __init__(self, max_attempts: int = 10):
+        self.max_attempts = max_attempts
 
-    def apply(self, game: DiscreteGameT):
-        payoff_sn = 1 - self.differential_inefficient
-        game.strategy.payoff_matrix[("saver", "non-saver")] = (payoff_sn, 1)
-        game.strategy.payoff_matrix[("non-saver", "saver")] = (1, payoff_sn)
+    def apply(self, state: GameState) -> GameState:
+        rng = np.random.default_rng()
+        node_u = rng.choice(state.graph, size=1)[0]
+        neighbors = list(state.graph.neighbors(node_u))
+
+        if not neighbors:
+            if DEBUG:
+                print("no neighbors found; passing")
+            return state
+
+        node_v = rng.choice(neighbors, size=1)[0]
+
+        node_w = node_u
+        attempts = 0
+        while node_w == node_u or node_w in neighbors:
+            if attempts == self.max_attempts:
+                node_w = None  # don't take any action
+                break
+            node_w = rng.choice(state.graph, size=1)[0]
+            attempts += 1
+
+        if node_w is not None:
+            if DEBUG:
+                print(f"swapping edge: ({node_u}, {node_v}) -> ({node_u}, {node_w})")
+            state.graph.remove_edge(node_u, node_v)
+            state.graph.add_edge(node_u, node_w)
+
+        return state

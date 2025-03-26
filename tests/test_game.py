@@ -1,37 +1,47 @@
 """Test the game module."""
 
-import logging
-
 import pytest
 
-from kala.models.game import DiscreteTwoByTwoGame
-from kala.models.strategies import CooperationStrategy
+from kala.models.game import GamePlan, GameState, play_game
+from kala.models.shocks import RemoveRandomPlayer, SwapRandomEdge
 
 
-@pytest.fixture(scope="function")  # needs to match scope of init_simple_graph
-def init_game(init_simple_graph):
-    """Initialize a game."""
-    coop = CooperationStrategy(
-        stochastic=True, differential_efficient=0.5, differential_inefficient=0.05, rng=0
-    )
-
-    return DiscreteTwoByTwoGame(init_simple_graph, coop)
-
-
-def test_filter_functions(init_game):
-    """Test filter functions."""
-    game = init_game
-    assert game.get_num_savers() == 3
-    assert game.create_filter_from_trait("group", 0) == [True] * 3 + [False] * 3
+@pytest.fixture(scope="module")
+def fixture_game_plan():
+    shocks = {
+        4: [SwapRandomEdge()],
+        6: [RemoveRandomPlayer()],
+    }
+    return GamePlan(steps=10, shocks=shocks)
 
 
-def test_init(init_game):
-    """NB: this is currently not a real test but it's here to make sure the functions run."""
-    game = init_game
-    wealth, num_savers = game.get_total_wealth(), game.get_num_savers()
-    logging.info(f"Init: wealth={wealth:.2f}, {num_savers=}")
+def test_game_plan(fixture_game_plan):
+    """Test that GamePlan works correctly."""
 
-    for _ in range(10):
-        game.play_round()
-        wealth, num_savers = game.get_total_wealth(), game.get_num_savers()
-        logging.info(f"wealth={wealth:.2f}, {num_savers=}")
+    plan = fixture_game_plan
+    assert plan.steps == 10
+    assert len(plan.shocks) == 2
+    assert 4 in plan.shocks
+    assert 6 in plan.shocks
+
+
+def test_play_game(fixture_game_state, fixture_game_plan):
+    """Test that a game can be played through multiple steps."""
+    initial_num_agents = len(fixture_game_state.agents)
+    initial_num_edges = fixture_game_state.graph.number_of_edges()
+
+    # Play through the game and check state at each step
+    for time, state in play_game(fixture_game_state, fixture_game_plan):
+        # Before player shock
+        if time < 6:
+            assert len(state.agents) == initial_num_agents
+        # After player shock
+        elif time >= 6:
+            assert len(state.agents) == initial_num_agents - 1
+
+        # Before edge shock shouldn't change number of edges
+        assert state.graph.number_of_edges() == initial_num_edges
+
+        # Basic invariants that should always hold
+        assert isinstance(state, GameState)
+        assert state.graph.number_of_nodes() > 0
