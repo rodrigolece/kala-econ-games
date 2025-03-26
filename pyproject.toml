@@ -1,10 +1,9 @@
 
 [project]
 name = "kala-econ-games"
-version = "0.1.6"
+version = "1.0.0"
 authors = [
   { name = "Rodrigo L.C.", email = "rodrigolealc@ciencias.unam.mx" },
-  { name = "Leonardo C.G.", email = "lmcastrogonzalez@turing.ac.uk" },
 ]
 description = "Kala: agent-based econ games"
 readme = "README.md"
